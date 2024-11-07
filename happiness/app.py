@@ -2,9 +2,13 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import dash
-from dash import dash_table, dcc, html
+from dash import dcc, html
 from dash.dependencies import Input, Output, State
 import requests
+
+#layouts
+from add_task_tab import add_task_layout
+from view_tasks_tab import view_tasks_layout
 
 # Flask setup
 server = Flask(__name__)
@@ -65,95 +69,23 @@ app = dash.Dash(__name__, server=server, url_base_pathname='/')
 app.layout = html.Div([
     html.H1('Task Manager'),
     html.Hr(),  # Separator
-    html.H2('Add a New Task'),
-    html.Div([
-        html.Label('Task Name:'),
-        dcc.Input(id='name', type='text', placeholder='Task Name',
-                  required=True, style={'flex': '1'})
-    ], style={'display': 'flex', 'align-items': 'center', 'margin-bottom': '10px', 'width': '50%'}),
-    html.Div([
-        html.Label('Complexity'),
-        dcc.Dropdown(
-            id='complexity',
-            options=[
-                {'label': 'Simple', 'value': 'simple'},
-                {'label': 'Medium', 'value': 'medium'},
-                {'label': 'Hard', 'value': 'hard'}
-            ],
-            value='simple',
-            style={'flex': '1'}
-        )
-    ],style={'display': 'flex', 'align-items': 'center', 'margin-bottom': '10px', 'width': '50%'}),
-    html.Div([
-        html.Label('Type:'),
-        #TODO: Add more task types or allow manual
-        dcc.Dropdown(
-            id='type',
-            options=[
-                {'label': 'Chores', 'value': 'chores'},
-                {'label': 'Learning', 'value': 'learning'},
-                {'label': 'Creative', 'value': 'creative'},
-                {'label': 'Constructive', 'value': 'constructive'}
-            ],
-            style={'flex': '1'}
-        )
-    ], style={'display': 'flex', 'align-items': 'center', 'margin-bottom': '10px', 'width': '50%'}),
-    html.Div([
-        html.Label('Priority'),
-        dcc.Dropdown(
-            id='priority',
-            options=[
-                {'label': 'Low', 'value': 'low'},
-                {'label': 'Medium', 'value': 'medium'},
-                {'label': 'High', 'value': 'high'}
-            ],
-            value='low',
-            style={'flex': '1'}
-        )
-    ], style={'display': 'flex', 'align-items': 'center', 'margin-bottom': '10px', 'width': '50%'}),
-    html.Div([
-        dcc.Checklist(
-            id='repeatable',
-            options=[{'label': 'Repeatable', 'value': 'repeatable'}],
-            style={'flex': '1'}
-        )
-    ], style={'display': 'flex', 'align-items': 'center', 'margin-bottom': '10px', 'width': '50%'}),
-    html.Button('Submit', id='submit', n_clicks=0),
-    html.Div(id='output'),
-    html.Hr(),  # Separator
-    html.H2('Current Tasks'),
-    dash_table.DataTable(
-        id='tasks-table',
-        columns=[
-            {'name': 'Task Name', 'id': 'name'},
-            {'name': 'Complexity', 'id': 'complexity'},
-            {'name': 'Type', 'id': 'type'},
-            {'name': 'Priority', 'id': 'priority'},
-            {'name': 'Repeatable', 'id': 'repeatable'}
-        ],
-        data=[]
-    ),
-    dcc.Interval(
-        id='interval-component',
-        interval=10*1000,  # in milliseconds
-        n_intervals=0
-    )
+    dcc.Tabs(id='tabs', value='add-task', children=[ # setting value sets default tab
+        dcc.Tab(label='Add Task', value='add-task', children=add_task_layout),
+        dcc.Tab(label='View Tasks', value='view-tasks', children=view_tasks_layout)
+    ])
 ])
 
 @app.callback(
     Output('output', 'children'),
-    Output('tasks-table', 'data'),
     Input('submit', 'n_clicks'),
-    Input('interval-component', 'n_intervals'),
     State('name', 'value'),
     State('complexity', 'value'),
     State('type', 'value'),
     State('priority', 'value'),
     State('repeatable', 'value')
 )
-def update_output(n_clicks, n_intervals, name, complexity, task_type, priority, repeatable):
+def update_output(n_clicks, name, complexity, task_type, priority, repeatable):
     '''Update the output div - save to db'''
-    message = ''
     if n_clicks > 0:
         task = {
             'name': name,
@@ -164,12 +96,18 @@ def update_output(n_clicks, n_intervals, name, complexity, task_type, priority, 
         }
         #TODO: URL is hardcoded, should be in a config file
         response = requests.post('http://127.0.0.1:8050/add_task', json=task, timeout=5)
-        message = response.json()['message']
+        return response.json()['message']
 
-    # Get all tasks
-    tasks_response = requests.get('http://127.0.0.1:8050/get_tasks', timeout=5)
-    tasks_data = tasks_response.json()
-    return message, tasks_data['tasks']
+@app.callback(
+    Output('tasks-table', 'data'),
+    Input('tabs', 'value')
+)
+def load_tasks(tab):
+    '''Load tasks into the table'''
+    if tab == 'view-tasks':
+        tasks_response = requests.get('http://127.0.0.1:8050/get_tasks', timeout=5)
+        return tasks_response.json()['tasks']
+    return []
 
 
 if __name__ == '__main__':
