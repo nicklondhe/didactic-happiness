@@ -2,7 +2,7 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import dash
-from dash import dash_table, dcc, html
+from dash import dcc, html
 from dash.dependencies import Input, Output, State
 import requests
 

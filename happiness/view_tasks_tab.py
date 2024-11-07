@@ -1,4 +1,5 @@
-from dash import dash_table, dcc, html
+'''View tasks tab layout'''
+from dash import dash_table, html
 
 view_tasks_layout = html.Div([
     html.Br(),

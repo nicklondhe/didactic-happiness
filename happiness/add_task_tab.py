@@ -1,3 +1,4 @@
+'''Add Task Tab Layout'''
 from dash import dcc, html
 
 add_task_layout = html.Div([
