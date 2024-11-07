@@ -1,3 +1,4 @@
+'''Main application file'''
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import dash
@@ -12,6 +13,7 @@ server.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(server)
 
 class Task(db.Model):
+    '''Task model'''
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), nullable=False)
     complexity = db.Column(db.String(10), nullable=False, default='simple')
@@ -21,14 +23,16 @@ class Task(db.Model):
     repeatable = db.Column(db.Boolean, default=False)
     rating = db.Column(db.Integer)
 
-with server.app_context():
-    db.create_all()
+#with server.app_context():
+#    db.create_all()
 
 @server.route('/add_task', methods=['POST'])
 def add_task():
+    '''Add a new task'''
     data = request.json
+    task_name = data['name']
     new_task = Task(
-        name=data['name'],
+        name=task_name,
         complexity=data.get('complexity', 'simple'),
         type=data.get('type'),
         priority=data.get('priority', 'low'),
@@ -36,7 +40,7 @@ def add_task():
     )
     db.session.add(new_task)
     db.session.commit()
-    return jsonify({'message': 'Task added successfully!'})
+    return jsonify({'message': f'Task "{task_name}" added successfully!'})
 
 # Dash setup
 app = dash.Dash(__name__, server=server, url_base_pathname='/')
@@ -45,7 +49,8 @@ app.layout = html.Div([
     html.H1('Task Manager'),
     html.Div([
         html.Label('Task Name:'),
-        dcc.Input(id='name', type='text', placeholder='Task Name', required=True, style={'flex': '1'})
+        dcc.Input(id='name', type='text', placeholder='Task Name',
+                  required=True, style={'flex': '1'})
     ], style={'display': 'flex', 'align-items': 'center', 'margin-bottom': '10px', 'width': '50%'}),
     html.Div([
         html.Label('Complexity'),
@@ -62,6 +67,7 @@ app.layout = html.Div([
     ],style={'display': 'flex', 'align-items': 'center', 'margin-bottom': '10px', 'width': '50%'}),
     html.Div([
         html.Label('Type:'),
+        #TODO: Add more task types or allow manual override
         dcc.Dropdown(
             id='type',
             options=[
@@ -107,6 +113,7 @@ app.layout = html.Div([
     State('repeatable', 'value')
 )
 def update_output(n_clicks, name, complexity, task_type, priority, repeatable):
+    '''Update the output div - save to db'''
     if n_clicks > 0:
         task = {
             'name': name,
@@ -115,7 +122,8 @@ def update_output(n_clicks, name, complexity, task_type, priority, repeatable):
             'priority': priority,
             'repeatable': bool(repeatable)
         }
-        response = requests.post('http://127.0.0.1:5000/add_task', json=task)
+        #TODO: URL is hardcoded, should be in a config file
+        response = requests.post('http://127.0.0.1:8050/add_task', json=task, timeout=5)
         return response.json()['message']
 
 if __name__ == '__main__':
