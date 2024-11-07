@@ -26,3 +26,8 @@ This application is built using Dash and Flask to manage tasks and save them to 
  - app.py: Combined Flask backend and Dash frontend.
  - requirements.txt: List of required Python packages.
  - setup.sh: Script to set up the Anaconda environment.
+
+## Features
+
+- Add new tasks with details such as name, complexity, type, due date, priority, and repeatable status.
+- View all current tasks in a table.
