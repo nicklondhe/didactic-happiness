@@ -1,8 +1,9 @@
 '''Task Repository'''
+from datetime import datetime, timezone
 from typing import List
 from sqlalchemy.orm import Session
 
-from happiness.tasks.model import Task
+from happiness.tasks.model import Recommendation, Task
 from happiness.tasks.randomrecommender import RandomRecommender
 from happiness.tasks.task import TaskWrapper
 
@@ -33,4 +34,16 @@ class TaskRepository:
     def recommend_tasks(self, num_tasks: int) -> List[TaskWrapper]:
         '''Recommend tasks based on user's mood'''
         tasks = self.get_tasks()
-        return self._recommender.recommend_tasks(tasks, num_tasks)
+        recommendations = self._recommender.recommend_tasks(tasks, num_tasks)
+        self.save_recommendations(recommendations)
+        return recommendations
+
+    def save_recommendations(self, tasks: List[TaskWrapper]) -> None:
+        '''Save recommended tasks'''
+        curr_ts = datetime.now(timezone.utc)
+        recommendations = [Recommendation(
+            task_id=task.get_id(),
+            rec_ts=curr_ts
+            ) for task in tasks]
+        self._db_session.add_all(recommendations)
+        self._db_session.commit()

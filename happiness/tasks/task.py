@@ -8,6 +8,10 @@ class TaskWrapper:
         '''Initialize task wrapper'''
         self._task_model = data
 
+    def get_id(self) -> int:
+        '''Get task id'''
+        return self._task_model.id
+
     def get_name(self) -> str:
         '''Get task name'''
         return self._task_model.name
