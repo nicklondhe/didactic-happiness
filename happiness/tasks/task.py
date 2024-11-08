@@ -35,7 +35,7 @@ class TaskWrapper:
     def get_status(self) -> str:
         '''Get task status'''
         return self._task_model.status
-    
+
     @staticmethod
     def from_dict(data: dict):
         '''Create task wrapper from dictionary'''

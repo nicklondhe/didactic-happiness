@@ -7,6 +7,8 @@ workflow_layout = html.Div([
         id='recommended-tasks-table',
         columns=[
             {'name': 'Task Name', 'id': 'name'},
+            {'name': 'Type', 'id': 'type'},
+            {'name': 'Priority', 'id': 'priority'},
             {'name': 'Actions', 'id': 'actions'}
         ],
         data=[]

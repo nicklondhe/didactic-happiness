@@ -23,6 +23,8 @@ with server.app_context():
     db.create_all()
 
 repository = TaskRepository(db.session)
+#TODO: URL is hardcoded, should be in a config file
+SERVER_URL = 'http://127.0.0.1:8050'
 
 @server.route('/add_task', methods=['POST'])
 def add_task():
@@ -53,6 +55,16 @@ def get_tasks():
 @server.route('/recommend_tasks', methods=['GET'])
 def recommend_tasks():
     '''Recommend tasks based on user's mood'''
+    num_tasks = 3
+    tasks = repository.recommend_tasks(num_tasks)
+    tasks_list = [
+        {
+            'name': task.get_name(),
+            'type': task.get_type(),
+            'priority': task.get_priority(),
+        } for task in tasks
+    ]
+    return jsonify({'tasks': tasks_list})
 
 
 # Dash setup
@@ -87,8 +99,7 @@ def update_output(n_clicks, name, complexity, task_type, priority, repeatable):
             'priority': priority,
             'repeatable': bool(repeatable)
         }
-        #TODO: URL is hardcoded, should be in a config file
-        response = requests.post('http://127.0.0.1:8050/add_task', json=task, timeout=5)
+        response = requests.post(f'{SERVER_URL}/add_task', json=task, timeout=5)
         return response.json()['message']
 
 @app.callback(
@@ -98,7 +109,20 @@ def update_output(n_clicks, name, complexity, task_type, priority, repeatable):
 def load_tasks(tab):
     '''Load tasks into the table'''
     if tab == 'view-tasks':
-        tasks_response = requests.get('http://127.0.0.1:8050/get_tasks', timeout=5)
+        tasks_response = requests.get(f'{SERVER_URL}/get_tasks', timeout=5)
+        return tasks_response.json()['tasks']
+    return []
+
+
+@app.callback(
+    Output('recommended-tasks-table', 'data'),
+    Input('tabs', 'value'),
+    Input('regenerate', 'n_clicks')
+)
+def load_recommended_tasks(tab, n_clicks):
+    '''Load recommended tasks into the table'''
+    if tab == 'workflow' and n_clicks >= 0:
+        tasks_response = requests.get(f'{SERVER_URL}/recommend_tasks', timeout=5)
         return tasks_response.json()['tasks']
     return []
 

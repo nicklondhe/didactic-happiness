@@ -3,6 +3,7 @@ from typing import List
 from sqlalchemy.orm import Session
 
 from happiness.tasks.model import Task
+from happiness.tasks.randomrecommender import RandomRecommender
 from happiness.tasks.task import TaskWrapper
 
 class TaskRepository:
@@ -10,7 +11,7 @@ class TaskRepository:
     def __init__(self, db_session: Session):
         '''Initialize task repository'''
         self._db_session = db_session
-        #self._recommender = recommender
+        self._recommender = RandomRecommender()
 
     def add_task(self, task: TaskWrapper) -> None:
         '''Add a new task'''
@@ -29,8 +30,7 @@ class TaskRepository:
         tasks = self._db_session.query(Task).filter_by(status='pending').all()
         return [TaskWrapper(task) for task in tasks]
 
-'''
     def recommend_tasks(self, num_tasks: int) -> List[TaskWrapper]:
+        '''Recommend tasks based on user's mood'''
         tasks = self.get_tasks()
         return self._recommender.recommend_tasks(tasks, num_tasks)
-'''
