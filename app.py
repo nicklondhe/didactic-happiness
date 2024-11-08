@@ -6,9 +6,9 @@ from dash.dependencies import Input, Output, State
 import requests
 
 #layouts
-from happiness.dash.add_task_tab import add_task_layout
-from happiness.dash.view_tasks_tab import view_tasks_layout
-from happiness.dash.workflow_tab import workflow_layout
+from happiness.ui.add_task_tab import add_task_layout
+from happiness.ui.view_tasks_tab import view_tasks_layout
+from happiness.ui.workflow_tab import workflow_layout
 from happiness.tasks.model import db
 from happiness.tasks.task import TaskWrapper
 from happiness.tasks.taskrepository import TaskRepository
@@ -28,7 +28,7 @@ repository = TaskRepository(db.session)
 def add_task():
     '''Add a new task'''
     data = request.json
-    task = TaskWrapper(data)
+    task = TaskWrapper.from_dict(data)
     task_name = data['name']
     repository.add_task(task)
     return jsonify({'message': f'Task "{task_name}" added successfully!'})

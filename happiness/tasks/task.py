@@ -4,15 +4,9 @@ from happiness.tasks.model import Task
 
 class TaskWrapper:
     '''Task wrapper over db model'''
-    def __init__(self, data: dict):
+    def __init__(self, data: Task):
         '''Initialize task wrapper'''
-        self._task_model = Task(
-            name=data.get('name'),
-            complexity=data.get('complexity', 'simple'),
-            type=data.get('type'),
-            priority=data.get('priority', 'low'),
-            repeatable=data.get('repeatable', False)
-        )
+        self._task_model = data
 
     def get_name(self) -> str:
         '''Get task name'''
@@ -41,3 +35,8 @@ class TaskWrapper:
     def get_status(self) -> str:
         '''Get task status'''
         return self._task_model.status
+    
+    @staticmethod
+    def from_dict(data: dict):
+        '''Create task wrapper from dictionary'''
+        return TaskWrapper(Task(**data))

@@ -12,4 +12,4 @@ class Task(db.Model):
     due_date = db.Column(db.String(10))
     priority = db.Column(db.String(10), nullable=False, default='low')
     repeatable = db.Column(db.Boolean, default=False)
-    status = db.Column(db.String(10), nullable=False, default='todo')
+    status = db.Column(db.String(10), nullable=False, default='pending')
