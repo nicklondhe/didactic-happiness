@@ -7,6 +7,7 @@ class TaskWrapper:
     def __init__(self, data: Task):
         '''Initialize task wrapper'''
         self._task_model = data
+        self._rec_id = None
 
     def _get_attr(self, attr: str):
         '''Helper method to get attribute from task model'''
@@ -43,6 +44,14 @@ class TaskWrapper:
     def get_status(self) -> str:
         '''Get task status'''
         return self._get_attr('status')
+
+    def get_rec_id(self) -> int:
+        '''Get recommendation ID'''
+        return self._rec_id
+
+    def set_rec_id(self, rec_id: int) -> None:
+        '''Set recommendation ID'''
+        self._rec_id = rec_id
 
     @staticmethod
     def from_dict(data: dict):
