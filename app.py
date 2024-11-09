@@ -46,7 +46,8 @@ def get_tasks():
             'complexity': task.get_complexity(),
             'type': task.get_type(),
             'priority': task.get_priority(),
-            'repeatable': task.is_repeatable()
+            'repeatable': task.is_repeatable(),
+            'status': task.get_status()
         } for task in tasks
     ]
     return jsonify({'tasks': tasks_list})
@@ -59,6 +60,8 @@ def recommend_tasks():
     tasks = repository.recommend_tasks(num_tasks)
     tasks_list = [
         {
+            'task_id': task.get_id(),
+            'rec_id': task.get_rec_id(),
             'name': task.get_name(),
             'type': task.get_type(),
             'priority': task.get_priority(),
@@ -66,6 +69,25 @@ def recommend_tasks():
     ]
     return jsonify({'tasks': tasks_list})
 
+@server.route('/transact_task', methods=['POST'])
+def transact_task():
+    '''Start, stop or end a task'''
+    data = request.json
+    task_id = data['task_id']
+    rec_id = data['rec_id']
+    action = data['action']
+
+    message = 'Invalid request'
+
+    if action == 'start':
+        message = repository.start_task(task_id, rec_id)
+    elif action == 'stop':
+        message = repository.stop_task(task_id, rec_id)
+    elif action == 'end':
+        rating = data['rating']
+        message = repository.finish_task(task_id, rec_id, rating)
+
+    return jsonify({'message': message})
 
 # Dash setup
 app = dash.Dash(__name__, server=server, url_base_pathname='/')
@@ -125,6 +147,34 @@ def load_recommended_tasks(tab, n_clicks):
         tasks_response = requests.get(f'{SERVER_URL}/recommend_tasks', timeout=5)
         return tasks_response.json()['tasks']
     return []
+
+@app.callback(
+    Output('workflow-output', 'children'),
+    Input('start-task', 'n_clicks'),
+    Input('stop-task', 'n_clicks'),
+    Input('end-task', 'n_clicks'),
+    State('recommended-tasks-table', 'selected_rows'),
+    State('recommended-tasks-table', 'data')
+)
+def manage_workflow(start_clicks, stop_clicks, end_clicks, selected_rows, tasks):
+    '''Manage task workflow'''
+    if not selected_rows:
+        return 'No task selected'
+
+    selected_task = tasks[selected_rows[0]]
+    task_id = selected_task['task_id']
+    rec_id = selected_task['rec_id']
+    data = {'task_id': task_id, 'rec_id': rec_id}
+
+    if start_clicks > 0:
+        data['action'] = 'start'
+    elif stop_clicks > 0:
+        data['action'] = 'stop'
+    elif end_clicks > 0:
+        data['action'] = 'end'
+        data['rating'] = 5 # TODO: get rating from user
+    response = requests.post(f'{SERVER_URL}/transact_task', json=data, timeout=5)
+    return response.json()['message']
 
 
 if __name__ == '__main__':

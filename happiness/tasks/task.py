@@ -7,38 +7,51 @@ class TaskWrapper:
     def __init__(self, data: Task):
         '''Initialize task wrapper'''
         self._task_model = data
+        self._rec_id = None
+
+    def _get_attr(self, attr: str):
+        '''Helper method to get attribute from task model'''
+        return getattr(self._task_model, attr)
 
     def get_id(self) -> int:
         '''Get task id'''
-        return self._task_model.id
+        return self._get_attr('id')
 
     def get_name(self) -> str:
         '''Get task name'''
-        return self._task_model.name
+        return self._get_attr('name')
 
     def get_complexity(self) -> str:
         '''Get task complexity'''
-        return self._task_model.complexity
+        return self._get_attr('complexity')
 
     def get_type(self) -> str:
         '''Get task type'''
-        return self._task_model.type
+        return self._get_attr('type')
 
     def get_due_date(self) -> str:
         '''Get task due date'''
-        return self._task_model.due_date
+        return self._get_attr('due_date')
 
     def get_priority(self) -> str:
         '''Get task priority'''
-        return self._task_model.priority
+        return self._get_attr('priority')
 
     def is_repeatable(self) -> bool:
         '''Check if task is repeatable'''
-        return self._task_model.repeatable
+        return self._get_attr('repeatable')
 
     def get_status(self) -> str:
         '''Get task status'''
-        return self._task_model.status
+        return self._get_attr('status')
+
+    def get_rec_id(self) -> int:
+        '''Get recommendation ID'''
+        return self._rec_id
+
+    def set_rec_id(self, rec_id: int) -> None:
+        '''Set recommendation ID'''
+        self._rec_id = rec_id
 
     @staticmethod
     def from_dict(data: dict):
