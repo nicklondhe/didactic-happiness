@@ -172,7 +172,7 @@ def manage_workflow(start_clicks, stop_clicks, end_clicks, selected_rows, tasks)
         data['action'] = 'stop'
     elif end_clicks > 0:
         data['action'] = 'end'
-        data['rating'] = 5 # TODO: get rating from user
+        data['rating'] = selected_task['rating']
     response = requests.post(f'{SERVER_URL}/transact_task', json=data, timeout=5)
     return response.json()['message']
 

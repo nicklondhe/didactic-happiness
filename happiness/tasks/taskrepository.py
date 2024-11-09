@@ -74,8 +74,12 @@ class TaskRepository:
             )
             self._db_session.add(work_log)
             
-        if work_log and has_end_date:
-            work_log.end_ts = datetime.now(timezone.utc)
+        if work_log:
+            if has_end_date:
+                work_log.end_ts = datetime.now(timezone.utc)
+            
+            if work_log.start_ts.tzinfo is None:
+                work_log.start_ts = work_log.start_ts.replace(tzinfo=timezone.utc)
         return work_log
 
     def _update_task_summary(self, task_id: int, time_worked: int = 0,
@@ -96,6 +100,7 @@ class TaskRepository:
             )
             self._db_session.add(task_summary)
         return task_summary
+    
 
     def start_task(self, task_id: int, rec_id: int) -> str:
         '''Start a task'''
