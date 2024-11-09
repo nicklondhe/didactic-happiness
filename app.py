@@ -1,7 +1,7 @@
 '''Main application file'''
 from flask import Flask, request, jsonify
 import dash
-from dash import dcc, html
+from dash import ctx, dcc, html
 from dash.dependencies import Input, Output, State
 import requests
 
@@ -165,14 +165,9 @@ def manage_workflow(start_clicks, stop_clicks, end_clicks, selected_rows, tasks)
     task_id = selected_task['task_id']
     rec_id = selected_task['rec_id']
     data = {'task_id': task_id, 'rec_id': rec_id}
-
-    if start_clicks > 0:
-        data['action'] = 'start'
-    elif stop_clicks > 0:
-        data['action'] = 'stop'
-    elif end_clicks > 0:
-        data['action'] = 'end'
-        data['rating'] = selected_task['rating']
+    data['action'] = ctx.triggered_id.split('-')[0]
+    data['rating'] = 5 # TODO: get rating from user
+        
     response = requests.post(f'{SERVER_URL}/transact_task', json=data, timeout=5)
     return response.json()['message']
 
