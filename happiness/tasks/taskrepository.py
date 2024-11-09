@@ -78,7 +78,7 @@ class TaskRepository:
             if has_end_date:
                 work_log.end_ts = datetime.now(timezone.utc)
             
-            if work_log.start_ts.tzinfo is None:
+            if work_log.start_ts and work_log.start_ts.tzinfo is None:
                 work_log.start_ts = work_log.start_ts.replace(tzinfo=timezone.utc)
         return work_log
 
