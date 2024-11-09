@@ -67,7 +67,14 @@ class TaskRepository:
         '''Update work log'''
         work_log = self._db_session.query(WorkLog).filter_by(task_id=task_id, rec_id=rec_id)\
             .order_by(WorkLog.start_ts.desc()).first()
-        if has_end_date:
+        if work_log is None:
+            work_log = WorkLog(
+                task_id=task_id,
+                rec_id=rec_id
+            )
+            self._db_session.add(work_log)
+            
+        if work_log and has_end_date:
             work_log.end_ts = datetime.now(timezone.utc)
         return work_log
 

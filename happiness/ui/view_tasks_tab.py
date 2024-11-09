@@ -10,7 +10,8 @@ view_tasks_layout = html.Div([
             {'name': 'Complexity', 'id': 'complexity'},
             {'name': 'Type', 'id': 'type'},
             {'name': 'Priority', 'id': 'priority'},
-            {'name': 'Repeatable', 'id': 'repeatable'}
+            {'name': 'Repeatable', 'id': 'repeatable'},
+            {'name': 'Status', 'id': 'status'}
         ],
         data=[]
     )

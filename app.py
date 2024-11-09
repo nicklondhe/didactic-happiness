@@ -46,7 +46,8 @@ def get_tasks():
             'complexity': task.get_complexity(),
             'type': task.get_type(),
             'priority': task.get_priority(),
-            'repeatable': task.is_repeatable()
+            'repeatable': task.is_repeatable(),
+            'status': task.get_status()
         } for task in tasks
     ]
     return jsonify({'tasks': tasks_list})
