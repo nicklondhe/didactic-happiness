@@ -150,4 +150,3 @@ class TaskRepository:
             return f'Task {task.name} finished successfully!'
         except ValueError as err:
             return str(err)
-
