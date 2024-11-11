@@ -101,6 +101,13 @@ class TaskRepository:
             self._db_session.add(task_summary)
         return task_summary
 
+    def _find_recommendation(self, task_id: int) -> int:
+        '''Find recommendation id'''
+        worklog = self._db_session.query(WorkLog).filter_by(task_id=task_id, end_ts=None)\
+            .order_by(WorkLog.start_ts.desc()).first()
+        if worklog is None:
+            raise ValueError(f'No active work log found for task {task_id}')
+        return worklog.rec_id
 
     def start_task(self, task_id: int, rec_id: int) -> str:
         '''Start a task'''
@@ -116,6 +123,9 @@ class TaskRepository:
     def stop_task(self, task_id: int, rec_id: int) -> str:
         '''Stop a task'''
         try:
+            if rec_id == -1:
+                rec_id = self._find_recommendation(task_id)
+
             task = self._update_task_status(task_id, 'in_progress', 'pending')
             work_log = self._update_work_log(task_id, rec_id, has_end_date=True)
             time_worked = (work_log.end_ts - work_log.start_ts).seconds
@@ -128,6 +138,9 @@ class TaskRepository:
     def finish_task(self, task_id: int, rec_id: int, rating: int = 1) -> str:
         '''Finish a task'''
         try:
+            if rec_id == -1:
+                rec_id = self._find_recommendation(task_id)
+
             task = self._update_task_status(task_id, 'in_progress', 'done')
             work_log = self._update_work_log(task_id, rec_id, has_end_date=True)
             time_worked = (work_log.end_ts - work_log.start_ts).seconds
@@ -137,3 +150,4 @@ class TaskRepository:
             return f'Task {task.name} finished successfully!'
         except ValueError as err:
             return str(err)
+

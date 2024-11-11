@@ -91,8 +91,9 @@ def transact_task():
 
     return jsonify({'message': message})
 
+
 # Dash setup
-app = dash.Dash(__name__, server=server, 
+app = dash.Dash(__name__, server=server,
                 url_base_pathname='/', external_stylesheets=[dbc.themes.SUPERHERO])
 
 app.layout = html.Div([
@@ -192,9 +193,9 @@ def manage_view_tasks(view_stop_clicks, view_end_clicks, selected_rows, tasks):
 
     selected_task = tasks[selected_rows[0]]
     task_id = selected_task['task_id']
-    rec_id = selected_task['rec_id']
+    rec_id = -1
     data = {'task_id': task_id, 'rec_id': rec_id}
-    data['action'] = ctx.triggered_id.split('-')[1]
+    data['action'] = ctx.triggered_id.split('-')[0]
     data['rating'] = 5 # TODO: get rating from user
 
     response = requests.post(f'{SERVER_URL}/transact_task', json=data, timeout=5)
