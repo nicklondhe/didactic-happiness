@@ -43,6 +43,7 @@ def get_tasks():
     tasks = repository.get_tasks()
     tasks_list = [
         {
+            'task_id': task.get_id(),
             'name': task.get_name(),
             'complexity': task.get_complexity(),
             'type': task.get_type(),
@@ -90,8 +91,9 @@ def transact_task():
 
     return jsonify({'message': message})
 
+
 # Dash setup
-app = dash.Dash(__name__, server=server, 
+app = dash.Dash(__name__, server=server,
                 url_base_pathname='/', external_stylesheets=[dbc.themes.SUPERHERO])
 
 app.layout = html.Div([
@@ -142,7 +144,6 @@ def load_tasks(tab):
         return tasks_response.json()['tasks']
     return []
 
-
 @app.callback(
     Output('recommended-tasks-table', 'data'),
     Input('tabs', 'value'),
@@ -178,6 +179,27 @@ def manage_workflow(start_clicks, stop_clicks, end_clicks, selected_rows, tasks)
     response = requests.post(f'{SERVER_URL}/transact_task', json=data, timeout=5)
     return response.json()['message']
 
+@app.callback(
+    Output('viewtasks-output', 'children'),
+    Input('stop-view-task', 'n_clicks'),
+    Input('end-view-task', 'n_clicks'),
+    State('tasks-table', 'selected_rows'),
+    State('tasks-table', 'data')
+)
+def manage_view_tasks(view_stop_clicks, view_end_clicks, selected_rows, tasks):
+    '''Manage tasks from the View Tasks tab'''
+    if not selected_rows:
+        return 'No task selected'
+
+    selected_task = tasks[selected_rows[0]]
+    task_id = selected_task['task_id']
+    rec_id = -1
+    data = {'task_id': task_id, 'rec_id': rec_id}
+    data['action'] = ctx.triggered_id.split('-')[0]
+    data['rating'] = 5 # TODO: get rating from user
+
+    response = requests.post(f'{SERVER_URL}/transact_task', json=data, timeout=5)
+    return response.json()['message']
 
 if __name__ == '__main__':
     app.run_server(debug=True)
