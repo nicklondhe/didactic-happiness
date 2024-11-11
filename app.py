@@ -1,6 +1,7 @@
 '''Main application file'''
 from flask import Flask, request, jsonify
 import dash
+import dash_bootstrap_components as dbc
 from dash import ctx, dcc, html
 from dash.dependencies import Input, Output, State
 import requests
@@ -90,15 +91,21 @@ def transact_task():
     return jsonify({'message': message})
 
 # Dash setup
-app = dash.Dash(__name__, server=server, url_base_pathname='/')
+app = dash.Dash(__name__, server=server, 
+                url_base_pathname='/', external_stylesheets=[dbc.themes.SUPERHERO])
 
 app.layout = html.Div([
-    html.H1('Task Manager'),
-    html.Hr(),  # Separator
-    dcc.Tabs(id='tabs', value='add-task', children=[ # setting value sets default tab
-        dcc.Tab(label='Add Task', value='add-task', children=add_task_layout),
-        dcc.Tab(label='View Tasks', value='view-tasks', children=view_tasks_layout),
-        dcc.Tab(label='Workflow', value='workflow', children=workflow_layout)
+    dbc.Container([
+        dbc.Row([
+            dbc.Col(html.H1('Task Manager', className='text-center my-4'), width=12)
+        ]),
+        dbc.Row([
+            dbc.Col(dcc.Tabs(id='tabs', value='add-task', children=[
+                dcc.Tab(label='Add Task', value='add-task', children=add_task_layout),
+                dcc.Tab(label='View Tasks', value='view-tasks', children=view_tasks_layout),
+                dcc.Tab(label='Workflow', value='workflow', children=workflow_layout)
+            ]), width=12)
+        ])
     ])
 ])
 
@@ -113,7 +120,7 @@ app.layout = html.Div([
 )
 def update_output(n_clicks, name, complexity, task_type, priority, repeatable):
     '''Update the output div - save to db'''
-    if n_clicks > 0:
+    if n_clicks and n_clicks > 0:
         task = {
             'name': name,
             'complexity': complexity,
@@ -143,7 +150,7 @@ def load_tasks(tab):
 )
 def load_recommended_tasks(tab, n_clicks):
     '''Load recommended tasks into the table'''
-    if tab == 'workflow' and n_clicks >= 0:
+    if tab == 'workflow' or (n_clicks and n_clicks > 0):
         tasks_response = requests.get(f'{SERVER_URL}/recommend_tasks', timeout=5)
         return tasks_response.json()['tasks']
     return []
@@ -167,7 +174,7 @@ def manage_workflow(start_clicks, stop_clicks, end_clicks, selected_rows, tasks)
     data = {'task_id': task_id, 'rec_id': rec_id}
     data['action'] = ctx.triggered_id.split('-')[0]
     data['rating'] = 5 # TODO: get rating from user
-        
+
     response = requests.post(f'{SERVER_URL}/transact_task', json=data, timeout=5)
     return response.json()['message']
 
