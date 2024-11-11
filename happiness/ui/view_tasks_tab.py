@@ -10,6 +10,7 @@ view_tasks_layout = dbc.Container([
         dbc.Col(dash_table.DataTable(
             id='tasks-table',
             columns=[
+                {'name': 'Task ID', 'id': 'task_id'},
                 {'name': 'Task Name', 'id': 'name', 'type': 'text'},
                 {'name': 'Complexity', 'id': 'complexity', 'type': 'text'},
                 {'name': 'Type', 'id': 'type', 'type': 'text'},
@@ -22,8 +23,20 @@ view_tasks_layout = dbc.Container([
             page_action='native',
             sort_action='native',
             filter_action='native',
+            row_selectable='single',
+            hidden_columns=['task_id'],
             style_table={'overflowX': 'auto'},
             style_cell={'backgroundColor': 'rgb(50, 50, 50)', 'color': 'white'},
+            css=[{"selector": ".show-hide", "rule": "display: none"}]
         ), width='auto', className='dbc')
+    ]),
+    dbc.Row([
+        dbc.Col(dbc.Button(
+            'Stop Task', id='stop-view-task', color='warning', className='mr-2'), width='auto'),
+        dbc.Col(dbc.Button(
+            'End Task', id='end-view-task', color='danger'), width='auto')
+    ], className='my-4'),
+    dbc.Row([
+        dbc.Col(html.Div(id='viewtasks-output', className='mt-4'), width=12)
     ])
 ])
