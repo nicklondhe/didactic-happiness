@@ -11,3 +11,4 @@ class RandomRecommender(TaskRecommenderInterface):
     def recommend_tasks(self, tasks: List[TaskWrapper], num_tasks: int) -> List[TaskWrapper]:
         '''Recommend random tasks'''
         return random.sample(tasks, num_tasks)
+
