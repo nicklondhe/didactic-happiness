@@ -16,8 +16,7 @@ from happiness.tasks.taskrepository import TaskRepository
 
 # Flask setup
 server = Flask(__name__)
-#TODO: Remove before merging
-server.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
+server.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
 server.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(server)
 
@@ -158,9 +157,10 @@ def load_recommended_tasks(tab, n_clicks):
     return []
 
 @app.callback(
-    Output('rating-modal', 'is_open'),
+    Output('rating-modal', 'is_open', allow_duplicate=True),
     Input('end-task', 'n_clicks'),
-    State('rating-modal', 'is_open')
+    State('rating-modal', 'is_open'),
+    prevent_initial_call=True
 )
 def toggle_modal(end_clicks, is_open):
     '''Toggle the rating modal visibility'''
@@ -196,6 +196,7 @@ def manage_workflow(start_clicks, stop_clicks, selected_rows, tasks):
 
 @app.callback(
     Output('workflow-output', 'children', allow_duplicate=True),
+    Output('rating-modal', 'is_open', allow_duplicate=True),
     Input('submit-rating', 'n_clicks'),
     State('recommended-tasks-table', 'selected_rows'),
     State('recommended-tasks-table', 'data'),
@@ -203,9 +204,9 @@ def manage_workflow(start_clicks, stop_clicks, selected_rows, tasks):
     prevent_initial_call=True
 )
 def submit_rating(n_clicks, selected_rows, tasks, rating):
-    '''Submit rating for the task'''
+    '''Submit rating for the task and close modal'''
     if not selected_rows:
-        return 'No task selected'
+        return 'No task selected', False
 
     selected_task = tasks[selected_rows[0]]
     task_id = selected_task['task_id']
@@ -213,7 +214,7 @@ def submit_rating(n_clicks, selected_rows, tasks, rating):
     data = {'task_id': task_id, 'rec_id': rec_id, 'action': 'end', 'rating': rating}
 
     response = requests.post(f'{SERVER_URL}/transact_task', json=data, timeout=5)
-    return response.json()['message']
+    return response.json()['message'], False
 
 @app.callback(
     Output('viewtasks-output', 'children'),

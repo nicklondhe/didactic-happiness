@@ -39,7 +39,7 @@ workflow_layout = dbc.Container([
         dbc.Col(html.Div(id='workflow-output', className='mt-4'), width=12)
     ]),
     dbc.Modal([
-        dbc.ModalHeader("Rate Task"),
+        dbc.ModalHeader("Rate Task Recommendation"),
         dbc.ModalBody([
             dcc.Slider(
                 id='rating-slider',
