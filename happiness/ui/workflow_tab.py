@@ -1,6 +1,6 @@
 '''Task workflow tab layout'''
 import dash_bootstrap_components as dbc
-from dash import dash_table, html
+from dash import dash_table, html, dcc
 
 workflow_layout = dbc.Container([
     dbc.Row([
@@ -37,5 +37,21 @@ workflow_layout = dbc.Container([
     ], className='my-4'),
     dbc.Row([
         dbc.Col(html.Div(id='workflow-output', className='mt-4'), width=12)
-    ])
+    ]),
+    dbc.Modal([
+        dbc.ModalHeader("Rate Task"),
+        dbc.ModalBody([
+            dcc.Slider(
+                id='rating-slider',
+                min=1,
+                max=5,
+                step=1,
+                marks={i: str(i) for i in range(1, 6)},
+                value=3
+            )
+        ]),
+        dbc.ModalFooter(
+            dbc.Button("Submit", id="submit-rating", className="ml-auto")
+        )
+    ], id="rating-modal", is_open=False)
 ])
