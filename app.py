@@ -157,14 +157,26 @@ def load_recommended_tasks(tab, n_clicks):
     return []
 
 @app.callback(
-    Output('workflow-output', 'children'),
+    Output('rating-modal', 'is_open', allow_duplicate=True),
+    Input('end-task', 'n_clicks'),
+    State('rating-modal', 'is_open'),
+    prevent_initial_call=True
+)
+def toggle_modal(end_clicks, is_open):
+    '''Toggle the rating modal visibility'''
+    if end_clicks:
+        return not is_open
+    return is_open
+
+@app.callback(
+    Output('workflow-output', 'children', allow_duplicate=True),
     Input('start-task', 'n_clicks'),
     Input('stop-task', 'n_clicks'),
-    Input('end-task', 'n_clicks'),
     State('recommended-tasks-table', 'selected_rows'),
-    State('recommended-tasks-table', 'data')
+    State('recommended-tasks-table', 'data'),
+    prevent_initial_call=True
 )
-def manage_workflow(start_clicks, stop_clicks, end_clicks, selected_rows, tasks):
+def manage_workflow(start_clicks, stop_clicks, selected_rows, tasks):
     '''Manage task workflow'''
     if not selected_rows:
         return 'No task selected'
@@ -173,11 +185,36 @@ def manage_workflow(start_clicks, stop_clicks, end_clicks, selected_rows, tasks)
     task_id = selected_task['task_id']
     rec_id = selected_task['rec_id']
     data = {'task_id': task_id, 'rec_id': rec_id}
-    data['action'] = ctx.triggered_id.split('-')[0]
-    data['rating'] = 5 # TODO: get rating from user
+    action = ctx.triggered_id.split('-')[0]
 
+    if action == 'end':
+        return ''
+
+    data['action'] = action
     response = requests.post(f'{SERVER_URL}/transact_task', json=data, timeout=5)
     return response.json()['message']
+
+@app.callback(
+    Output('workflow-output', 'children', allow_duplicate=True),
+    Output('rating-modal', 'is_open', allow_duplicate=True),
+    Input('submit-rating', 'n_clicks'),
+    State('recommended-tasks-table', 'selected_rows'),
+    State('recommended-tasks-table', 'data'),
+    State('rating-slider', 'value'),
+    prevent_initial_call=True
+)
+def submit_rating(n_clicks, selected_rows, tasks, rating):
+    '''Submit rating for the task and close modal'''
+    if not selected_rows:
+        return 'No task selected', False
+
+    selected_task = tasks[selected_rows[0]]
+    task_id = selected_task['task_id']
+    rec_id = selected_task['rec_id']
+    data = {'task_id': task_id, 'rec_id': rec_id, 'action': 'end', 'rating': rating}
+
+    response = requests.post(f'{SERVER_URL}/transact_task', json=data, timeout=5)
+    return response.json()['message'], False
 
 @app.callback(
     Output('viewtasks-output', 'children'),
