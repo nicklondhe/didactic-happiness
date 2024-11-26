@@ -58,7 +58,7 @@ def get_tasks():
 @server.route('/recommend_tasks', methods=['GET'])
 def recommend_tasks():
     '''Recommend tasks based on user's mood'''
-    num_tasks = 3
+    num_tasks = 5 #TODO: this is a bad place to control rec size
     tasks = repository.recommend_tasks(num_tasks)
     tasks_list = [
         {
