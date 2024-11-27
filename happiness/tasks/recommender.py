@@ -9,7 +9,3 @@ class TaskRecommenderInterface(ABC):
     @abstractmethod
     def recommend_tasks(self, tasks: List[TaskWrapper], num_tasks: int) -> List[TaskWrapper]:
         '''Recommend tasks based on user's mood'''
-    
-    @abstractmethod
-    def update_chosen_task(self, task: TaskWrapper) -> None:
-        '''Callback after a task is chosen'''
