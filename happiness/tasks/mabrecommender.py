@@ -36,3 +36,6 @@ class MABRecommender(TaskRecommenderInterface):
         top_k_arms = np.argsort(sampled_probs)[-num_tasks:]
         return [random.sample(arm_values[arm_id], 1) for arm_id in top_k_arms]
     
+    def update_chosen_task(self, task_id: int) -> None:
+        return super().update_chosen_task(task_id)
+    

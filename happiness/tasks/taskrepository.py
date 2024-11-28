@@ -116,6 +116,7 @@ class TaskRepository:
             self._update_work_log(task_id, rec_id)
             self._update_task_summary(task_id)
             self._db_session.commit()
+            self._recommender.update_chosen_task(task_id)
             return f'Task {task.name} started successfully!'
         except ValueError as err:
             return str(err)

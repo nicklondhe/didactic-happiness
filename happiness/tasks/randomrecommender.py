@@ -12,3 +12,6 @@ class RandomRecommender(TaskRecommenderInterface):
         '''Recommend random tasks'''
         return random.sample(tasks, num_tasks)
 
+    def update_chosen_task(self, task_id: int) -> None:
+        '''Callback for when the given task is chosen'''
+        return
