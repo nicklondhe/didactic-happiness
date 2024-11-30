@@ -4,6 +4,7 @@ import dash
 import dash_bootstrap_components as dbc
 from dash import ctx, dcc, html
 from dash.dependencies import Input, Output, State
+from loguru import logger
 import requests
 
 #layouts
@@ -18,6 +19,7 @@ from happiness.tasks.taskrepository import TaskRepository
 server = Flask(__name__)
 server.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
 server.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+server.config['SQLALCHEMY_ECHO'] = True
 db.init_app(server)
 
 with server.app_context():
@@ -31,6 +33,7 @@ SERVER_URL = 'http://127.0.0.1:8050'
 def add_task():
     '''Add a new task'''
     data = request.json
+    logger.info(f'add_task invoked with {data}')
     task = TaskWrapper.from_dict(data)
     task_name = data['name']
     repository.add_task(task)
@@ -52,6 +55,7 @@ def get_tasks():
             'status': task.get_status()
         } for task in tasks
     ]
+    logger.info(f'Returning get_tasks with {len(tasks)} tasks')
     return jsonify({'tasks': tasks_list})
 
 
@@ -69,12 +73,14 @@ def recommend_tasks():
             'priority': task.get_priority(),
         } for task in tasks
     ]
+    logger.debug(f'Recommended tasks: {tasks_list}')
     return jsonify({'tasks': tasks_list})
 
 @server.route('/transact_task', methods=['POST'])
 def transact_task():
     '''Start, stop or end a task'''
     data = request.json
+    logger.info(f'transact_task called with {data}')
     task_id = data['task_id']
     rec_id = data['rec_id']
     action = data['action']
@@ -181,14 +187,14 @@ def manage_workflow(start_clicks, stop_clicks, selected_rows, tasks):
     if not selected_rows:
         return 'No task selected'
 
+    if (start_clicks is None) and (stop_clicks is None):
+        return 'Invalid action'
+
     selected_task = tasks[selected_rows[0]]
     task_id = selected_task['task_id']
     rec_id = selected_task['rec_id']
     data = {'task_id': task_id, 'rec_id': rec_id}
     action = ctx.triggered_id.split('-')[0]
-
-    if action == 'end':
-        return ''
 
     data['action'] = action
     response = requests.post(f'{SERVER_URL}/transact_task', json=data, timeout=5)
@@ -205,8 +211,9 @@ def manage_workflow(start_clicks, stop_clicks, selected_rows, tasks):
 )
 def submit_rating(n_clicks, selected_rows, tasks, rating):
     '''Submit rating for the task and close modal'''
-    if not selected_rows:
+    if not selected_rows or not n_clicks:
         return 'No task selected', False
+    
 
     selected_task = tasks[selected_rows[0]]
     task_id = selected_task['task_id']
@@ -227,6 +234,9 @@ def manage_view_tasks(view_stop_clicks, view_end_clicks, selected_rows, tasks):
     '''Manage tasks from the View Tasks tab'''
     if not selected_rows:
         return 'No task selected'
+    
+    if (view_stop_clicks is None) and (view_end_clicks is None):
+        return 'Invalid action'
 
     selected_task = tasks[selected_rows[0]]
     task_id = selected_task['task_id']

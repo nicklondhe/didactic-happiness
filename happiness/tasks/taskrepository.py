@@ -1,6 +1,8 @@
 '''Task Repository'''
 from datetime import datetime, timezone
 from typing import List
+
+from loguru import logger
 from sqlalchemy import not_
 from sqlalchemy.orm import Session
 
@@ -14,6 +16,7 @@ class TaskRepository:
         '''Initialize task repository'''
         self._db_session = db_session
         self._recommender = RandomRecommender()
+        logger.info(f'Init task repository with a {self._recommender.__class__} recommender')
 
     def add_task(self, task: TaskWrapper) -> None:
         '''Add a new task'''
@@ -52,6 +55,7 @@ class TaskRepository:
         assert len(recommendations) == num_tasks, 'Recommendations not saved properly'
 
         for idx in range(num_tasks):
+            logger.debug(f'Setting rec_id {recommendations[idx].id} for task {tasks[idx].get_id()}')
             tasks[idx].set_rec_id(recommendations[idx].id) #copy rec_id back to task
 
 
@@ -68,6 +72,7 @@ class TaskRepository:
         work_log = self._db_session.query(WorkLog).filter_by(task_id=task_id, rec_id=rec_id)\
             .order_by(WorkLog.start_ts.desc()).first()
         if work_log is None:
+            logger.info(f'Creating a new work log for task {task_id} and recommendation {rec_id}')
             work_log = WorkLog(
                 task_id=task_id,
                 rec_id=rec_id
@@ -79,12 +84,14 @@ class TaskRepository:
                 work_log.end_ts = datetime.now(timezone.utc)
 
             if work_log.start_ts and work_log.start_ts.tzinfo is None:
+                logger.debug('Updating worklog start timezone to UTC')
                 work_log.start_ts = work_log.start_ts.replace(tzinfo=timezone.utc)
         return work_log
 
     def _update_task_summary(self, task_id: int, time_worked: int = 0,
                              has_end_date: bool = False, rating: int = None) -> TaskSummary:
         '''Update task summary'''
+        logger.debug(f'Updating task summary for task {task_id}')
         task_summary = self._db_session.query(TaskSummary).filter_by(task_id=task_id).first()
         if task_summary:
             task_summary.num_restarts += 1
@@ -99,6 +106,7 @@ class TaskRepository:
                 start_date=datetime.now(timezone.utc)
             )
             self._db_session.add(task_summary)
+        logger.debug(f'Task summary: {task_summary}')
         return task_summary
 
     def _find_recommendation(self, task_id: int) -> int:
@@ -118,6 +126,7 @@ class TaskRepository:
             self._db_session.commit()
             return f'Task {task.name} started successfully!'
         except ValueError as err:
+            logger.exception(err)
             return str(err)
 
     def stop_task(self, task_id: int, rec_id: int) -> str:
@@ -133,6 +142,7 @@ class TaskRepository:
             self._db_session.commit()
             return f'Task {task.name} stopped successfully!'
         except ValueError as err:
+            logger.exception(err)
             return str(err)
 
     def finish_task(self, task_id: int, rec_id: int, rating: int = 1) -> str:
@@ -149,4 +159,5 @@ class TaskRepository:
             self._db_session.commit()
             return f'Task {task.name} finished successfully!'
         except ValueError as err:
+            logger.exception(err)
             return str(err)
