@@ -187,7 +187,7 @@ def manage_workflow(start_clicks, stop_clicks, selected_rows, tasks):
     if not selected_rows:
         return 'No task selected'
 
-    if not start_clicks > 0 or stop_clicks > 0:
+    if (start_clicks is None) and (stop_clicks is None):
         return 'Invalid action'
 
     selected_task = tasks[selected_rows[0]]
@@ -211,8 +211,9 @@ def manage_workflow(start_clicks, stop_clicks, selected_rows, tasks):
 )
 def submit_rating(n_clicks, selected_rows, tasks, rating):
     '''Submit rating for the task and close modal'''
-    if not selected_rows or n_clicks <= 0:
-        return 'No task selected or no rating submitted', False
+    if not selected_rows or not n_clicks:
+        return 'No task selected', False
+    
 
     selected_task = tasks[selected_rows[0]]
     task_id = selected_task['task_id']
@@ -231,8 +232,11 @@ def submit_rating(n_clicks, selected_rows, tasks, rating):
 )
 def manage_view_tasks(view_stop_clicks, view_end_clicks, selected_rows, tasks):
     '''Manage tasks from the View Tasks tab'''
-    if not selected_rows or (view_stop_clicks <= 0 or view_end_clicks <= 0):
+    if not selected_rows:
         return 'No task selected'
+    
+    if (view_stop_clicks is None) and (view_end_clicks is None):
+        return 'Invalid action'
 
     selected_task = tasks[selected_rows[0]]
     task_id = selected_task['task_id']

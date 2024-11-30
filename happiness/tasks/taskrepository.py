@@ -16,7 +16,7 @@ class TaskRepository:
         '''Initialize task repository'''
         self._db_session = db_session
         self._recommender = RandomRecommender()
-        logger.info(f'Initialzied task repository with {self._recommender.__class__} recommender')
+        logger.info(f'Init task repository with a {self._recommender.__class__} recommender')
 
     def add_task(self, task: TaskWrapper) -> None:
         '''Add a new task'''
