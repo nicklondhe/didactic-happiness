@@ -8,6 +8,12 @@ class TaskWrapper:
         '''Initialize task wrapper'''
         self._task_model = data
         self._rec_id = None
+        self.hash_field_lookup = {
+            'complexity': {'simple': 0, 'medium': 1, 'hard': 2},
+            'type': {'chores': 0, 'learning': 1, 'constructive': 2, 'creative': 3},
+            'priority': {'low': 0, 'medium': 1, 'high': 2},
+            'repeatable': {1: 0, 0: 1}
+        }
 
     def _get_attr(self, attr: str):
         '''Helper method to get attribute from task model'''
@@ -57,3 +63,15 @@ class TaskWrapper:
     def from_dict(data: dict):
         '''Create task wrapper from dictionary'''
         return TaskWrapper(Task(**data))
+
+    def get_hash_code(self):
+        '''Return a hash value computed over fields'''
+        value = 0
+        for field, lookups in self.hash_field_lookup.items():
+            fval = self._get_attr(field)
+            val = lookups.get(fval, len(lookups))
+            value = value << 3
+            value += val
+            if val not in lookups:
+                lookups[fval] = val
+        return value
