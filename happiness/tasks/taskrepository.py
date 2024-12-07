@@ -123,15 +123,17 @@ class TaskRepository:
         if worklog is None:
             raise ValueError(f'No active work log found for task {task_id}')
         return worklog.rec_id
-    
+
     def _add_task_to_cache(self, task: Task) -> None:
+        '''Add given task to cache'''
         if not self.tasks:
             self.get_tasks()
-        
+
         if task.id not in self.tasks:
             self.tasks[task.id] = TaskWrapper(task)
-    
+
     def _remove_task_from_cache(self, task: Task) -> None:
+        '''Remove task from cache'''
         if not self.tasks:
             self.get_tasks()
 
@@ -185,5 +187,3 @@ class TaskRepository:
         except ValueError as err:
             logger.exception(err)
             return str(err)
-
-    
