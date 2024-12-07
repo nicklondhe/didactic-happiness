@@ -16,6 +16,7 @@ class TaskRepository:
         '''Initialize task repository'''
         self._db_session = db_session
         self._recommender = RandomRecommender()
+        self.tasks = None
         logger.info(f'Init task repository with a {self._recommender.__class__} recommender')
 
     def add_task(self, task: TaskWrapper) -> None:
@@ -29,11 +30,17 @@ class TaskRepository:
         )
         self._db_session.add(new_task)
         self._db_session.commit()
+        self._add_task_to_cache(new_task)
 
     def get_tasks(self) -> List[TaskWrapper]:
         '''Get all pending tasks'''
-        tasks = self._db_session.query(Task).filter(not_(Task.status == 'done')).all()
-        return [TaskWrapper(task) for task in tasks]
+        if not self.tasks:
+            logger.info('Tasks not loaded, doing a db fetch')
+            tasks = self._db_session.query(Task).filter(not_(Task.status == 'done')).all()
+            tasks = {task.id : TaskWrapper(task) for task in tasks}
+            logger.info(f'Loaded {len(tasks)} tasks)')
+            self.tasks = tasks
+        return list(self.tasks.values())
 
     def recommend_tasks(self, num_tasks: int) -> List[TaskWrapper]:
         '''Recommend tasks based on user's mood'''
@@ -117,6 +124,22 @@ class TaskRepository:
             raise ValueError(f'No active work log found for task {task_id}')
         return worklog.rec_id
 
+    def _add_task_to_cache(self, task: Task) -> None:
+        '''Add given task to cache'''
+        if not self.tasks:
+            self.get_tasks()
+
+        if task.id not in self.tasks:
+            self.tasks[task.id] = TaskWrapper(task)
+
+    def _remove_task_from_cache(self, task: Task) -> None:
+        '''Remove task from cache'''
+        if not self.tasks:
+            self.get_tasks()
+
+        if task.id in self.tasks:
+            del self.tasks[task.id]
+
     def start_task(self, task_id: int, rec_id: int) -> str:
         '''Start a task'''
         try:
@@ -124,6 +147,7 @@ class TaskRepository:
             self._update_work_log(task_id, rec_id)
             self._update_task_summary(task_id)
             self._db_session.commit()
+            self._remove_task_from_cache(task) # remove task from cache as cant be recommended
             return f'Task {task.name} started successfully!'
         except ValueError as err:
             logger.exception(err)
@@ -140,6 +164,7 @@ class TaskRepository:
             time_worked = (work_log.end_ts - work_log.start_ts).seconds
             self._update_task_summary(task_id, time_worked=time_worked)
             self._db_session.commit()
+            self._add_task_to_cache(task) # add back to cache
             return f'Task {task.name} stopped successfully!'
         except ValueError as err:
             logger.exception(err)
@@ -157,6 +182,7 @@ class TaskRepository:
             self._update_task_summary(task_id, time_worked=time_worked,
                                       has_end_date=True, rating=rating)
             self._db_session.commit()
+            self._remove_task_from_cache(task) # remove from cache
             return f'Task {task.name} finished successfully!'
         except ValueError as err:
             logger.exception(err)
