@@ -213,7 +213,7 @@ def submit_rating(n_clicks, selected_rows, tasks, rating):
     '''Submit rating for the task and close modal'''
     if not selected_rows or not n_clicks:
         return 'No task selected', False
-
+    
 
     selected_task = tasks[selected_rows[0]]
     task_id = selected_task['task_id']
@@ -234,7 +234,7 @@ def manage_view_tasks(view_stop_clicks, view_end_clicks, selected_rows, tasks):
     '''Manage tasks from the View Tasks tab'''
     if not selected_rows:
         return 'No task selected'
-
+    
     if (view_stop_clicks is None) and (view_end_clicks is None):
         return 'Invalid action'
 
