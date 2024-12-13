@@ -166,3 +166,21 @@ class TaskRepository:
         except ValueError as err:
             logger.exception(err)
             return str(err)
+
+    def reschedule_tasks(self, task_ids: List[int]) -> str:
+        '''Reschedule tasks with given ids'''
+        tasks = []
+        message = None
+        try:
+            for task_id in task_ids:
+                task = self._update_task_status(task_id, 'done', 'pending')
+                tasks.append(task)
+        except ValueError as err:
+            logger.exception(err)
+            message = str(err)
+
+        if not message:
+            self._db_session.commit()
+            task_names = [task.name for task in tasks]
+            message = f'Tasks {task_names} rescheduled succesfully!'
+        return message

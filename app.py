@@ -9,6 +9,7 @@ import requests
 
 #layouts
 from happiness.ui.add_task_tab import add_task_layout
+from happiness.ui.reschedule_tasks import reschedule_tasks_layout
 from happiness.ui.view_tasks_tab import view_tasks_layout
 from happiness.ui.workflow_tab import workflow_layout
 from happiness.tasks.model import db
@@ -51,11 +52,28 @@ def get_tasks():
             'complexity': task.get_complexity(),
             'type': task.get_type(),
             'priority': task.get_priority(),
+        } for task in tasks
+    ]
+    logger.info(f'Returning get_tasks with {len(tasks)} tasks')
+    return jsonify({'tasks': tasks_list})
+
+
+@server.route('/get_resched_tasks', methods=['GET'])
+def get_reschedulable_tasks():
+    '''Get tasks that can be rescheduled'''
+    tasks = repository.get_reschedulable_tasks()
+    tasks_list = [
+        {
+            'task_id': task.get_id(),
+            'name': task.get_name(),
+            'complexity': task.get_complexity(),
+            'type': task.get_type(),
+            'priority': task.get_priority(),
             'repeatable': task.is_repeatable(),
             'status': task.get_status()
         } for task in tasks
     ]
-    logger.info(f'Returning get_tasks with {len(tasks)} tasks')
+    logger.info(f'Returning get_resched_tasks with {len(tasks)} tasks')
     return jsonify({'tasks': tasks_list})
 
 
@@ -75,6 +93,7 @@ def recommend_tasks():
     ]
     logger.debug(f'Recommended tasks: {tasks_list}')
     return jsonify({'tasks': tasks_list})
+
 
 @server.route('/transact_task', methods=['POST'])
 def transact_task():
@@ -109,9 +128,14 @@ app.layout = html.Div([
         ]),
         dbc.Row([
             dbc.Col(dcc.Tabs(id='tabs', value='add-task', children=[
-                dcc.Tab(label='Add Task', value='add-task', children=add_task_layout),
-                dcc.Tab(label='View Tasks', value='view-tasks', children=view_tasks_layout),
-                dcc.Tab(label='Workflow', value='workflow', children=workflow_layout)
+                dcc.Tab(label='Add Task', value='add-task',
+                        children=add_task_layout),
+                dcc.Tab(label='Reschedule Tasks', value='resched-tasks',
+                        children=reschedule_tasks_layout),
+                dcc.Tab(label='View Tasks', value='view-tasks',
+                        children=view_tasks_layout),
+                dcc.Tab(label='Workflow', value='workflow',
+                        children=workflow_layout)
             ]), width=12)
         ])
     ])
@@ -147,6 +171,17 @@ def load_tasks(tab):
     '''Load tasks into the table'''
     if tab == 'view-tasks':
         tasks_response = requests.get(f'{SERVER_URL}/get_tasks', timeout=5)
+        return tasks_response.json()['tasks']
+    return []
+
+@app.callback(
+    Output('reschedule-tasks-table', 'data'),
+    Input('tabs', 'value')
+)
+def load_resched_tasks(tab):
+    '''Load tasks into the table'''
+    if tab == 'resched-tasks':
+        tasks_response = requests.get(f'{SERVER_URL}/get_resched_tasks', timeout=5)
         return tasks_response.json()['tasks']
     return []
 
@@ -213,7 +248,6 @@ def submit_rating(n_clicks, selected_rows, tasks, rating):
     '''Submit rating for the task and close modal'''
     if not selected_rows or not n_clicks:
         return 'No task selected', False
-    
 
     selected_task = tasks[selected_rows[0]]
     task_id = selected_task['task_id']
@@ -234,7 +268,7 @@ def manage_view_tasks(view_stop_clicks, view_end_clicks, selected_rows, tasks):
     '''Manage tasks from the View Tasks tab'''
     if not selected_rows:
         return 'No task selected'
-    
+
     if (view_stop_clicks is None) and (view_end_clicks is None):
         return 'Invalid action'
 
