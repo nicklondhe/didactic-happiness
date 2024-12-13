@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import List
 
 from loguru import logger
-from sqlalchemy import not_
+from sqlalchemy import and_, not_
 from sqlalchemy.orm import Session
 
 from happiness.tasks.model import Recommendation, Task, TaskSummary, WorkLog
@@ -58,6 +58,11 @@ class TaskRepository:
             logger.debug(f'Setting rec_id {recommendations[idx].id} for task {tasks[idx].get_id()}')
             tasks[idx].set_rec_id(recommendations[idx].id) #copy rec_id back to task
 
+    def get_reschedulable_tasks(self) -> List[TaskWrapper]:
+        '''Get repeatable tasks that have been completed'''
+        tasks = self._db_session.query(Task).filter(
+            and_(Task.repeatable == 1, Task.status == 'done')).all() # TODO: index?
+        return [TaskWrapper(task) for task in tasks]
 
     def _update_task_status(self, task_id: int, current_status: str, new_status: str) -> Task:
         '''Update task status'''
