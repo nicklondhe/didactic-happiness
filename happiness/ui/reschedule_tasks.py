@@ -29,5 +29,8 @@ reschedule_tasks_layout = dbc.Container([
         dbc.Col(dbc.Button(
             'Reschedule Selected', id='reschedule-selected',
             color='primary', className='mr-2'), width='auto')
+    ]),
+    dbc.Row([
+        dbc.Col(html.Div(id='resched-output', className='mt-4'), width=12)
     ])
 ])

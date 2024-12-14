@@ -52,6 +52,8 @@ def get_tasks():
             'complexity': task.get_complexity(),
             'type': task.get_type(),
             'priority': task.get_priority(),
+            'repeatable': task.is_repeatable(),
+            'status': task.get_status()
         } for task in tasks
     ]
     logger.info(f'Returning get_tasks with {len(tasks)} tasks')
@@ -69,8 +71,6 @@ def get_reschedulable_tasks():
             'complexity': task.get_complexity(),
             'type': task.get_type(),
             'priority': task.get_priority(),
-            'repeatable': task.is_repeatable(),
-            'status': task.get_status()
         } for task in tasks
     ]
     logger.info(f'Returning get_resched_tasks with {len(tasks)} tasks')
@@ -114,6 +114,17 @@ def transact_task():
         rating = data['rating']
         message = repository.finish_task(task_id, rec_id, rating)
 
+    return jsonify({'message': message})
+
+
+@server.route('/reschedule_tasks', methods=['POST'])
+def reschedule_tasks():
+    '''Reschedule selected tasks'''
+    data = request.json
+    logger.info(f'reschedule_tasks called with {data}')
+    task_ids = data['tasks']
+
+    message = repository.reschedule_tasks(task_ids=[int(task_id) for task_id in task_ids])
     return jsonify({'message': message})
 
 
@@ -280,6 +291,25 @@ def manage_view_tasks(view_stop_clicks, view_end_clicks, selected_rows, tasks):
     data['rating'] = 5 # TODO: get rating from user
 
     response = requests.post(f'{SERVER_URL}/transact_task', json=data, timeout=5)
+    return response.json()['message']
+
+@app.callback(
+    Output('resched-output', 'children'),
+    Input('reschedule-selected', 'n_clicks'),
+    State('reschedule-tasks-table', 'selected_rows'),
+    State('reschedule-tasks-table', 'data')
+)
+def manage_reschedule_tasks(regen_clicks, selected_rows, tasks):
+    '''Reschedule selected tasks'''
+    if not selected_rows:
+        return 'No task selected'
+
+    if regen_clicks is None:
+        return 'Invalid action'
+
+    task_ids = [tasks[idx]['task_id'] for idx in selected_rows]
+    data = {'tasks' : task_ids}
+    response = requests.post(f'{SERVER_URL}/reschedule_tasks', json=data, timeout=5)
     return response.json()['message']
 
 if __name__ == '__main__':
