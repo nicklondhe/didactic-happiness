@@ -67,26 +67,26 @@ class TaskRepository:
         task.status = new_status
         return task
 
-    def _update_work_log(self, task_id: int, rec_id: int, has_end_date: bool = False) -> WorkLog:
+    def _create_work_log(self, task_id: int, rec_id: int):
+        '''Create work log'''
+        logger.info(f'Creating a new work log for task {task_id} and recommendation {rec_id}')
+        work_log = WorkLog(task_id=task_id, rec_id=rec_id, start_ts=datetime.now(timezone.utc))
+        self._db_session.add(work_log)
+    
+    def _update_work_log(self, task_id: int, rec_id: int) -> WorkLog:
         '''Update work log'''
-        work_log = self._db_session.query(WorkLog).filter_by(task_id=task_id, rec_id=rec_id)\
+        work_log = self._db_session.query(WorkLog).filter_by(task_id=task_id, rec_id=rec_id, end_ts=None)\
             .order_by(WorkLog.start_ts.desc()).first()
-        if work_log is None:
-            logger.info(f'Creating a new work log for task {task_id} and recommendation {rec_id}')
-            work_log = WorkLog(
-                task_id=task_id,
-                rec_id=rec_id
-            )
-            self._db_session.add(work_log)
-
+        
         if work_log:
-            if has_end_date:
-                work_log.end_ts = datetime.now(timezone.utc)
+            work_log.end_ts = datetime.now(timezone.utc)
 
             if work_log.start_ts and work_log.start_ts.tzinfo is None:
                 logger.debug('Updating worklog start timezone to UTC')
                 work_log.start_ts = work_log.start_ts.replace(tzinfo=timezone.utc)
-        return work_log
+            return work_log
+        else:
+            raise ValueError(f'Could not find a work log for the given task {task_id} and recommendation {rec_id}')
 
     def _update_task_summary(self, task_id: int, time_worked: int = 0,
                              has_end_date: bool = False, rating: int = None) -> TaskSummary:
@@ -121,7 +121,7 @@ class TaskRepository:
         '''Start a task'''
         try:
             task = self._update_task_status(task_id, 'pending', 'in_progress')
-            self._update_work_log(task_id, rec_id)
+            self._create_work_log(task_id, rec_id)
             self._update_task_summary(task_id)
             self._db_session.commit()
             return f'Task {task.name} started successfully!'
@@ -136,7 +136,7 @@ class TaskRepository:
                 rec_id = self._find_recommendation(task_id)
 
             task = self._update_task_status(task_id, 'in_progress', 'pending')
-            work_log = self._update_work_log(task_id, rec_id, has_end_date=True)
+            work_log = self._update_work_log(task_id, rec_id)
             time_worked = (work_log.end_ts - work_log.start_ts).seconds
             self._update_task_summary(task_id, time_worked=time_worked)
             self._db_session.commit()
@@ -152,7 +152,7 @@ class TaskRepository:
                 rec_id = self._find_recommendation(task_id)
 
             task = self._update_task_status(task_id, 'in_progress', 'done')
-            work_log = self._update_work_log(task_id, rec_id, has_end_date=True)
+            work_log = self._update_work_log(task_id, rec_id)
             time_worked = (work_log.end_ts - work_log.start_ts).seconds
             self._update_task_summary(task_id, time_worked=time_worked,
                                       has_end_date=True, rating=rating)
