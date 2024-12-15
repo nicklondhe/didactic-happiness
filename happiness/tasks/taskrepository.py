@@ -77,12 +77,13 @@ class TaskRepository:
         logger.info(f'Creating a new work log for task {task_id} and recommendation {rec_id}')
         work_log = WorkLog(task_id=task_id, rec_id=rec_id, start_ts=datetime.now(timezone.utc))
         self._db_session.add(work_log)
-    
+
     def _update_work_log(self, task_id: int, rec_id: int) -> WorkLog:
         '''Update work log'''
-        work_log = self._db_session.query(WorkLog).filter_by(task_id=task_id, rec_id=rec_id, end_ts=None)\
+        work_log = self._db_session.query(WorkLog).filter_by(
+            task_id=task_id, rec_id=rec_id, end_ts=None)\
             .order_by(WorkLog.start_ts.desc()).first()
-        
+
         if work_log:
             work_log.end_ts = datetime.now(timezone.utc)
 
@@ -91,18 +92,22 @@ class TaskRepository:
                 work_log.start_ts = work_log.start_ts.replace(tzinfo=timezone.utc)
             return work_log
         else:
-            raise ValueError(f'Could not find a work log for the given task {task_id} and recommendation {rec_id}')
+            msg = 'Could not find a work log for the given task' \
+                  f' {task_id} and recommendation {rec_id}'
+            raise ValueError(msg)
 
     def _update_task_summary(self, task_id: int, time_worked: int = 0,
                              has_end_date: bool = False, rating: int = None) -> TaskSummary:
         '''Update task summary'''
         logger.debug(f'Updating task summary for task {task_id}')
-        task_summary = self._db_session.query(TaskSummary).filter_by(task_id=task_id).first()
+        task_summary = self._db_session.query(TaskSummary).filter_by(
+            task_id=task_id, has_ended=0).first()
         if task_summary:
             task_summary.num_restarts += 1
             task_summary.time_worked += time_worked
             if has_end_date:
                 task_summary.end_date = datetime.now(timezone.utc)
+                task_summary.has_ended = True
             if rating is not None:
                 task_summary.rating = rating
         else:
