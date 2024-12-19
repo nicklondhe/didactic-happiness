@@ -1,9 +1,10 @@
 '''Task Repository'''
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from math import ceil
 from typing import List
 
 from loguru import logger
-from sqlalchemy import and_, not_
+from sqlalchemy import and_, not_, text
 from sqlalchemy.orm import Session
 import pandas as pd
 
@@ -169,6 +170,13 @@ class TaskRepository:
             time_worked = (work_log.end_ts - work_log.start_ts).seconds
             self._update_task_summary(task_id, time_worked=time_worked,
                                       has_end_date=True, rating=rating)
+
+            # auto-schedule
+            if task.repeatable:
+                next_date = self.find_next_schedule_date(task_id)
+                if next_date:
+                    task.next_scheduled = next_date
+
             self._db_session.commit()
             return f'Task {task.name} finished successfully!'
         except ValueError as err:
@@ -224,3 +232,38 @@ class TaskRepository:
 
         summary = df.groupby('start_date')['hours_worked'].sum().to_dict()
         return summary
+
+    def find_next_schedule_date(self, task_id: int) -> datetime.date:
+        '''Find next auto schedule date for given task'''
+        #TODO: hack of 15 days
+        query = f'''
+            SELECT avg(interval_days) as avg_interval
+            FROM(
+            WITH task_intervals AS (
+                SELECT
+                    ts.task_id,
+                    ts.start_date,
+                    LEAD(ts.start_date) OVER (PARTITION BY ts.task_id ORDER BY ts.start_date) AS next_start_date
+                FROM
+                    task_summary ts, task t
+                WHERE ts.task_id  = t.id 
+                AND t.repeatable = 1
+                AND t.id = {task_id}
+            )
+            SELECT
+                task_id,
+                julianday(next_start_date) - julianday(start_date) AS interval_days
+            FROM
+                task_intervals
+            WHERE
+                next_start_date IS NOT NULL
+            AND interval_days < 15 ) 
+        '''
+        result = self._db_session.execute(text(query)).scalar_one_or_none()
+        next_date = None
+        if result:
+            interval = ceil(result)
+            next_date = datetime.now(timezone.utc) + timedelta(days=interval)
+            next_date = next_date.date()
+
+        return next_date
