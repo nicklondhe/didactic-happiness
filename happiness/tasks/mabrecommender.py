@@ -4,6 +4,7 @@ from typing import Dict, List
 import pickle
 import random
 
+from loguru import logger
 from happiness.tasks.recommender import TaskRecommenderInterface
 from happiness.tasks.task import TaskWrapper
 
@@ -13,9 +14,12 @@ class MABRecommender(TaskRecommenderInterface):
     def __init__(self, mdl_file: str, epsilon: float = 0.2):
         '''Initialize MAB recommender'''
         self.qvalues, self.counts = self._load_model(mdl_file)
+        self.mdl_file = mdl_file
         self.epsilon = epsilon
         self.last_tasks = {} # last recs
         self.task_chosen = False
+        logger.info(f'Loaded MAB recommender with epsilon \
+                    {self.epsilon} and {len(self.qvalues)} arms')
 
     def _load_model(self, mdl_file: str) -> dict:
         '''Load model from a pickle file'''
@@ -35,7 +39,7 @@ class MABRecommender(TaskRecommenderInterface):
         recs = []
         arm_keys = set(hashed_tasks.keys())
         arm_history = set()
-        qvalues = sorted((qv for qv in self.qvalues if qv in arm_keys),
+        qvalues = sorted((qv for qv in self.qvalues.items() if qv[0] in arm_keys),
                          key = lambda x: x[1], reverse=True)
         for k in arm_keys:
             if k not in qvalues:
@@ -77,3 +81,10 @@ class MABRecommender(TaskRecommenderInterface):
             reward = 1 if t_id == task_id else 0
             self.qvalues[t_hash] += (reward - self.qvalues[t_hash]) * 1.0 / count
             self.counts[t_hash] = count
+
+    def save(self):
+        '''Save updated values'''
+        with open(self.mdl_file, 'wb') as f:
+            obj = {'qvalues': self.qvalues, 'counts': self.counts}
+            pickle.dump(obj, f)
+        return super().save()

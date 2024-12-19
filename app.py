@@ -1,4 +1,6 @@
 '''Main application file'''
+import signal
+
 from flask import Flask, request, jsonify
 import dash
 import dash_bootstrap_components as dbc
@@ -26,6 +28,12 @@ with server.app_context():
 repository = TaskRepository(db.session)
 #TODO: URL is hardcoded, should be in a config file
 SERVER_URL = 'http://127.0.0.1:8050'
+
+def handler(signum, frame):
+    '''Cleanup on app shutdown'''
+    repository.shutdown()
+
+signal.signal(signal.SIGINT, handler)
 
 @server.route('/add_task', methods=['POST'])
 def add_task():

@@ -43,4 +43,5 @@ ENV/
 env/
 env.bak/
 venv.bak/
-happiness/instance/tasks.db
+happiness/instance
+models

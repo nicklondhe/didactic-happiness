@@ -15,3 +15,7 @@ class RandomRecommender(TaskRecommenderInterface):
     def update_chosen_task(self, task_id: int) -> None:
         '''Callback for when the given task is chosen'''
         return
+
+    def save(self):
+        '''Save callback - NOOP'''
+        return

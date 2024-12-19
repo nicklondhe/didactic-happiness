@@ -13,3 +13,7 @@ class TaskRecommenderInterface(ABC):
     @abstractmethod
     def update_chosen_task(self, task_id: int) -> None:
         '''Callback after a task is chosen'''
+
+    @abstractmethod
+    def save(self):
+        '''Perform any saves needed'''
