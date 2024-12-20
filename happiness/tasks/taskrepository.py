@@ -67,12 +67,18 @@ class TaskRepository:
             and_(Task.repeatable == 1, Task.status == 'done')).all() # TODO: index?
         return [TaskWrapper(task) for task in tasks]
 
-    def _update_task_status(self, task_id: int, current_status: str, new_status: str) -> Task:
+    def _update_task_status(self, task_id: int,
+                            current_status: str, new_status: str,
+                            clear_dt: bool = False) -> Task:
         '''Update task status'''
         task = self._db_session.query(Task).filter_by(id=task_id, status=current_status).first()
         if task is None:
             raise ValueError(f'Task with id {task_id} is not in {current_status} state')
         task.status = new_status
+
+        if clear_dt:
+            task.next_scheduled = None
+
         return task
 
     def _create_work_log(self, task_id: int, rec_id: int):
@@ -130,6 +136,11 @@ class TaskRepository:
             raise ValueError(f'No active work log found for task {task_id}')
         return worklog.rec_id
 
+    def _find_resched_tasks(self, tgt_date: datetime.date) -> List[int]:
+        '''Find tasks that are to be rescheduled on the given date'''
+        rows = self._db_session.query(Task).filter_by(next_scheduled=tgt_date, repeatable=1).all()
+        return [row.id for row in rows] if rows else []
+
     def start_task(self, task_id: int, rec_id: int) -> str:
         '''Start a task'''
         try:
@@ -173,7 +184,7 @@ class TaskRepository:
 
             # auto-schedule
             if task.repeatable:
-                next_date = self.find_next_schedule_date(task_id)
+                next_date = self._find_next_schedule_date(task_id)
                 if next_date:
                     task.next_scheduled = next_date
 
@@ -183,13 +194,13 @@ class TaskRepository:
             logger.exception(err)
             return str(err)
 
-    def reschedule_tasks(self, task_ids: List[int]) -> str:
+    def reschedule_tasks(self, task_ids: List[int], auto: bool = False) -> str:
         '''Reschedule tasks with given ids'''
         tasks = []
         message = None
         try:
             for task_id in task_ids:
-                task = self._update_task_status(task_id, 'done', 'pending')
+                task = self._update_task_status(task_id, 'done', 'pending', True)
                 tasks.append(task)
         except ValueError as err:
             logger.exception(err)
@@ -198,7 +209,8 @@ class TaskRepository:
         if not message:
             self._db_session.commit()
             task_names = [task.name for task in tasks]
-            message = f'Tasks {task_names} rescheduled succesfully!'
+            auto_prefix = 'automatically ' if auto else ''
+            message = f'Tasks {task_names} {auto_prefix} rescheduled succesfully!'
         return message
 
     def start_day(self):
@@ -233,7 +245,7 @@ class TaskRepository:
         summary = df.groupby('start_date')['hours_worked'].sum().to_dict()
         return summary
 
-    def find_next_schedule_date(self, task_id: int) -> datetime.date:
+    def _find_next_schedule_date(self, task_id: int) -> datetime.date:
         '''Find next auto schedule date for given task'''
         #TODO: hack of 15 days
         query = f'''
@@ -267,3 +279,11 @@ class TaskRepository:
             next_date = next_date.date()
 
         return next_date
+
+    def auto_reschedule(self, tgt_date: datetime.date = None) -> str:
+        '''Automatically reschedule tasks due on given target date'''
+        if tgt_date is None:
+            tgt_date = datetime.now(timezone.utc).date()
+
+        task_ids = self._find_resched_tasks(tgt_date)
+        return self.reschedule_tasks(task_ids)

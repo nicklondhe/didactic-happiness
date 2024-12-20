@@ -31,6 +31,7 @@ reschedule_tasks_layout = dbc.Container([
             color='primary', className='mr-2'), width='auto')
     ]),
     dbc.Row([
+        dbc.Col(html.Div(id='autosched-output', className='mt-4'), width=12),
         dbc.Col(html.Div(id='resched-output', className='mt-4'), width=12)
     ])
 ])
