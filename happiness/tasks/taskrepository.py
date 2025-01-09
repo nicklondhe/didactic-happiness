@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from happiness import MODEL_DIR
 from happiness.tasks.model import Recommendation, Task, TaskSummary, WorkLog
-from happiness.tasks.mabrecommender import MABRecommender
+from happiness.tasks.randomrecommender import RandomRecommender
 from happiness.tasks.task import TaskWrapper
 
 class TaskRepository:
@@ -15,7 +15,8 @@ class TaskRepository:
         '''Initialize task repository'''
         self._db_session = db_session
         #TODO: Fix hardcoded file name
-        self._recommender = MABRecommender(mdl_file=f'{MODEL_DIR}/eps-mab.pkl')
+        self._recommender = RandomRecommender()
+        #self._recommender = MABRecommender(mdl_file=f'{MODEL_DIR}/eps-mab.pkl')
 
     def add_task(self, task: TaskWrapper) -> None:
         '''Add a new task'''

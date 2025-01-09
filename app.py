@@ -1,6 +1,4 @@
 '''Main application file'''
-import signal
-
 from flask import Flask, request, jsonify
 import dash
 import dash_bootstrap_components as dbc
@@ -18,7 +16,7 @@ from happiness.tasks.taskrepository import TaskRepository
 
 # Flask setup
 server = Flask(__name__)
-server.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
+server.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
 server.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(server)
 
@@ -29,11 +27,6 @@ repository = TaskRepository(db.session)
 #TODO: URL is hardcoded, should be in a config file
 SERVER_URL = 'http://127.0.0.1:8050'
 
-def handler(signum, frame):
-    '''Cleanup on app shutdown'''
-    repository.shutdown()
-
-signal.signal(signal.SIGINT, handler)
 
 @server.route('/add_task', methods=['POST'])
 def add_task():
@@ -100,6 +93,18 @@ def transact_task():
     return jsonify({'message': message})
 
 
+@server.route('/start_day', methods=['POST'])
+def start_day():
+    '''Start day'''
+    return jsonify({})
+
+
+@server.route('/end_day', methods=['POST'])
+def end_day():
+    '''End day'''
+    return jsonify({})
+
+
 # Dash setup
 app = dash.Dash(__name__, server=server,
                 url_base_pathname='/', external_stylesheets=[dbc.themes.SUPERHERO])
@@ -110,10 +115,10 @@ app.layout = html.Div([
             dbc.Col(html.H1('Task Manager', className='text-center my-4'), width=12)
         ]),
         dbc.Row([
-            dbc.Col(dcc.Tabs(id='tabs', value='add-task', children=[
+            dbc.Col(dcc.Tabs(id='tabs', value='workflow', children=[
+                dcc.Tab(label='Workflow', value='workflow', children=workflow_layout),
                 dcc.Tab(label='Add Task', value='add-task', children=add_task_layout),
-                dcc.Tab(label='View Tasks', value='view-tasks', children=view_tasks_layout),
-                dcc.Tab(label='Workflow', value='workflow', children=workflow_layout)
+                dcc.Tab(label='View Tasks', value='view-tasks', children=view_tasks_layout)
             ]), width=12)
         ])
     ])
@@ -245,6 +250,22 @@ def manage_view_tasks(view_stop_clicks, view_end_clicks, selected_rows, tasks):
 
     response = requests.post(f'{SERVER_URL}/transact_task', json=data, timeout=5)
     return response.json()['message']
+
+@app.callback(
+    Output('tasks-table-row', 'style'),
+    Output('task-buttons-row', 'style'),
+    Output('start-day', 'children'),
+    Input('start-day', 'n_clicks'),
+    prevent_initial_call=True
+)
+def toggle_day(n_clicks):
+    '''Toggle the day start/end and show/hide buttons'''
+    if n_clicks % 2 == 1:
+        requests.post(f'{SERVER_URL}/start_day', timeout=5)
+        return {'display': 'flex'}, {'display': 'flex'}, 'End Day'
+    else:
+        requests.post(f'{SERVER_URL}/end_day', timeout=5)
+        return {'display': 'none'}, {'display': 'none'}, 'Start Day'
 
 if __name__ == '__main__':
     app.run_server(debug=True)
