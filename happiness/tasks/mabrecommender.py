@@ -13,8 +13,8 @@ class MABRecommender(TaskRecommenderInterface):
     '''MAB Recommender'''
     def __init__(self, mdl_file: str, epsilon: float = 0.2):
         '''Initialize MAB recommender'''
-        self.qvalues, self.counts = self._load_model(mdl_file)
         self.mdl_file = mdl_file
+        self.qvalues, self.counts = self._load_model(self.mdl_file)
         self.epsilon = epsilon
         self.last_tasks = {} # last recs
         self.task_chosen = False
@@ -81,6 +81,10 @@ class MABRecommender(TaskRecommenderInterface):
             reward = 1 if t_id == task_id else 0
             self.qvalues[t_hash] += (reward - self.qvalues[t_hash]) * 1.0 / count
             self.counts[t_hash] = count
+
+    def load(self):
+        '''Reload model'''
+        self.qvalues, self.counts = self._load_model(self.mdl_file)
 
     def save(self):
         '''Save updated values'''

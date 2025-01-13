@@ -96,12 +96,14 @@ def transact_task():
 @server.route('/start_day', methods=['POST'])
 def start_day():
     '''Start day'''
+    repository.start_day()
     return jsonify({})
 
 
 @server.route('/end_day', methods=['POST'])
 def end_day():
     '''End day'''
+    repository.end_day()
     return jsonify({})
 
 

@@ -15,5 +15,9 @@ class TaskRecommenderInterface(ABC):
         '''Callback after a task is chosen'''
 
     @abstractmethod
+    def load(self):
+        '''Load/reload models as needed'''
+
+    @abstractmethod
     def save(self):
         '''Perform any saves needed'''

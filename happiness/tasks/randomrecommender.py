@@ -16,6 +16,10 @@ class RandomRecommender(TaskRecommenderInterface):
         '''Callback for when the given task is chosen'''
         return
 
+    def load(self):
+        '''Load/reload - NOOP for now'''
+        return
+
     def save(self):
         '''Save callback - NOOP'''
         return

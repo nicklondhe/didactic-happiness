@@ -4,7 +4,7 @@ from typing import List
 from sqlalchemy import not_
 from sqlalchemy.orm import Session
 
-from happiness import MODEL_DIR
+#from happiness import MODEL_DIR
 from happiness.tasks.model import Recommendation, Task, TaskSummary, WorkLog
 from happiness.tasks.randomrecommender import RandomRecommender
 from happiness.tasks.task import TaskWrapper
@@ -155,6 +155,10 @@ class TaskRepository:
         except ValueError as err:
             return str(err)
 
-    def shutdown(self):
-        '''Cleanup or shutdown'''
+    def start_day(self):
+        '''Day start'''
+        self._recommender.load()
+
+    def end_day(self):
+        '''Day end'''
         self._recommender.save()
