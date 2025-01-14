@@ -62,7 +62,9 @@ class MABRecommender(TaskRecommenderInterface):
             sorted_qvalues.append((k, 0))
         return sorted_qvalues
 
-    def _run_mab(self, qvalues: Dict[int, float], hashed_tasks: Dict[int, List[TaskWrapper]], num_tasks: int) -> list:
+    def _run_mab(self, qvalues: Dict[int, float],
+                 hashed_tasks: Dict[int, List[TaskWrapper]],
+                 num_tasks: int) -> list:
         '''Run multi arm bandit'''
         recs = list()
         arm_keys = hashed_tasks.keys()
@@ -101,9 +103,11 @@ class MABRecommender(TaskRecommenderInterface):
             count = self.counts[self.last_context].get(t_hash, 0)
             count += 1
             reward = 1 if t_id == task_id else 0
-            self.qvalues[self.last_context][t_hash] += (reward - self.qvalues[self.last_context][t_hash]) * 1.0 / count
+            qv = self.qvalues[self.last_context][t_hash]
+            qv += (reward - qv) * 1.0 / count
+            self.qvalues[self.last_context][t_hash] = qv
             self.counts[self.last_context][t_hash] = count
-    
+
     def recommend_tasks(self, tasks: List[TaskWrapper], num_tasks: int) -> List[TaskWrapper]:
         '''Contextual MAB recs'''
         # Flush old recs and update qvalues, counts
