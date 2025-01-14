@@ -89,7 +89,7 @@ class MABRecommender(TaskRecommenderInterface):
             if not task:
                 task = arm_tasks[0]
                 logger.warning(f'Using first task {task.get_name()} as no other tasks available')
-                
+
             self.last_tasks[task.get_id()] = task.get_hash_code()
             recs.append(task)
 
@@ -104,7 +104,7 @@ class MABRecommender(TaskRecommenderInterface):
             self.qvalues[self.last_context][t_hash] += (reward - self.qvalues[self.last_context][t_hash]) * 1.0 / count
             self.counts[self.last_context][t_hash] = count
     
-    def new_recs(self, tasks: List[TaskWrapper], num_tasks: int) -> List[TaskWrapper]:
+    def recommend_tasks(self, tasks: List[TaskWrapper], num_tasks: int) -> List[TaskWrapper]:
         '''Contextual MAB recs'''
         # Flush old recs and update qvalues, counts
         if not self.task_chosen and self.last_context:
