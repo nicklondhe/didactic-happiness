@@ -22,7 +22,7 @@ class MABRecommender(TaskRecommenderInterface):
         self.task_chosen = False
         self.ce = ContextEncoder(6, 22, 4) #TODO: load from config?
         logger.info(f'Loaded MAB recommender with epsilon \
-                    {self.epsilon} and {len(self.qvalues)} arms')
+                    {self.epsilon} and {len(self.qvalues)} contextual arms')
 
     def _load_model(self, mdl_file: str) -> dict:
         '''Load model from a pickle file'''
@@ -40,7 +40,7 @@ class MABRecommender(TaskRecommenderInterface):
         self.last_context = ctx
         ctx_qvalues = self.qvalues.get(ctx, None)
         if not ctx_qvalues:
-            logger.error(f'Could not laod contextual values for {curr_hr}')
+            logger.error(f'Could not load contextual values for {curr_hr}')
             self.last_context = None
         return ctx_qvalues
 
@@ -61,6 +61,12 @@ class MABRecommender(TaskRecommenderInterface):
         for k in missing_keys:
             sorted_qvalues.append((k, 0))
         return sorted_qvalues
+
+    def _update_rec_history(self, recs: List[TaskWrapper]):
+        '''Replace last recs with new ones'''
+        self.last_tasks.clear()
+        for task in recs:
+            self.last_tasks[task.get_id()] = task.get_hash_code()
 
     def _run_mab(self, qvalues: Dict[int, float],
                  hashed_tasks: Dict[int, List[TaskWrapper]],
@@ -92,9 +98,9 @@ class MABRecommender(TaskRecommenderInterface):
                 task = arm_tasks[0]
                 logger.warning(f'Using first task {task.get_name()} as no other tasks available')
 
-            self.last_tasks[task.get_id()] = task.get_hash_code()
             recs.append(task)
 
+        self._update_rec_history(recs)
         return recs
 
     def _update_qvalues(self, task_id: int = None) -> None:
