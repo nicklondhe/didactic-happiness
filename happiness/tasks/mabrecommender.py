@@ -49,7 +49,8 @@ class MABRecommender(TaskRecommenderInterface):
         random.shuffle(tasks)
         hashed_tasks = defaultdict(list)
         for task in tasks:
-            hashed_tasks[task.get_hash_code()].append(task)
+            if task.get_id() not in self.last_tasks: #ignore last recs
+                hashed_tasks[task.get_hash_code()].append(task)
         return hashed_tasks
 
     @staticmethod
@@ -62,19 +63,15 @@ class MABRecommender(TaskRecommenderInterface):
             sorted_qvalues.append((k, 0))
         return sorted_qvalues
 
-    def _update_rec_history(self, recs: List[TaskWrapper]):
-        '''Replace last recs with new ones'''
-        self.last_tasks.clear()
-        for task in recs:
-            self.last_tasks[task.get_id()] = task.get_hash_code()
-
     def _run_mab(self, qvalues: Dict[int, float],
                  hashed_tasks: Dict[int, List[TaskWrapper]],
                  num_tasks: int) -> list:
         '''Run multi arm bandit'''
+        self.last_tasks.clear()
         recs = list()
         arm_keys = hashed_tasks.keys()
         sorted_qvalues = self._sort_and_augment_qvalues(qvalues, arm_keys)
+        logger.debug(f'Sorted qvalues: {sorted_qvalues}')
         arm_history = set()
         while len(recs) < num_tasks:
             task = None
@@ -82,25 +79,19 @@ class MABRecommender(TaskRecommenderInterface):
                 # random pull
                 available_arms = list(arm_keys - arm_history)
                 selected_arm = random.choice(available_arms)
+                logger.debug(f'Random pull: {selected_arm}')
             else:
                 # select based on qvalue
                 for arm, _ in sorted_qvalues:
                     if arm not in arm_history:
                         selected_arm = arm
+                        logger.debug(f'Pulled arm {selected_arm}')
                         break
             arm_history.add(selected_arm)
-            arm_tasks = hashed_tasks[selected_arm]
-            for t in arm_tasks:
-                if t.get_id() not in self.last_tasks:
-                    task = t
-                    break
-            if not task:
-                task = arm_tasks[0]
-                logger.warning(f'Using first task {task.get_name()} as no other tasks available')
-
+            task = hashed_tasks[selected_arm][0]
+            self.last_tasks[task.get_id()] = task.get_hash_code()
             recs.append(task)
 
-        self._update_rec_history(recs)
         return recs
 
     def _update_qvalues(self, task_id: int = None) -> None:
