@@ -12,7 +12,7 @@ from happiness.tasks.task import TaskWrapper
 
 class MABRecommender(TaskRecommenderInterface):
     '''MAB Recommender'''
-    def __init__(self, mdl_file: str, epsilon: float = 0.2):
+    def __init__(self, mdl_file: str, epsilon: float = 0.3):
         '''Initialize MAB recommender'''
         self.mdl_file = mdl_file
         self.qvalues, self.counts = self._load_model(self.mdl_file)
@@ -30,7 +30,7 @@ class MABRecommender(TaskRecommenderInterface):
 
         with open(mdl_file, 'rb') as f:
             data = pickle.load(f)
-
+        logger.info(f'Loading a contextual MAB from model file {mdl_file}')
         return data['qvalues'], data['counts']
 
     def _load_contextual_values(self) -> dict:
@@ -135,6 +135,7 @@ class MABRecommender(TaskRecommenderInterface):
         with open(self.mdl_file, 'wb') as f:
             obj = {'qvalues': self.qvalues, 'counts': self.counts}
             pickle.dump(obj, f)
+        logger.info('Saved model file')
         return super().save()
 
 class ContextEncoder:

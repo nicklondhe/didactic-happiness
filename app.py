@@ -16,7 +16,7 @@ from happiness.tasks.taskrepository import TaskRepository
 
 # Flask setup
 server = Flask(__name__)
-server.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
+server.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
 server.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(server)
 
