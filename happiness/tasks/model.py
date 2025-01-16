@@ -43,4 +43,5 @@ class TaskSummary(db.Model):
     start_date = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
     end_date = db.Column(db.DateTime)
     rating = db.Column(db.Integer, nullable=False, default=1)
+    has_ended = db.Column(db.Boolean, default=False)
     task = db.relationship('Task', backref='summary')

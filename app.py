@@ -4,10 +4,12 @@ import dash
 import dash_bootstrap_components as dbc
 from dash import ctx, dcc, html
 from dash.dependencies import Input, Output, State
+from loguru import logger
 import requests
 
 #layouts
 from happiness.ui.add_task_tab import add_task_layout
+from happiness.ui.reschedule_tasks import reschedule_tasks_layout
 from happiness.ui.view_tasks_tab import view_tasks_layout
 from happiness.ui.workflow_tab import workflow_layout
 from happiness.tasks.model import db
@@ -18,6 +20,7 @@ from happiness.tasks.taskrepository import TaskRepository
 server = Flask(__name__)
 server.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
 server.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+server.config['SQLALCHEMY_ECHO'] = True
 db.init_app(server)
 
 with server.app_context():
@@ -32,6 +35,7 @@ SERVER_URL = 'http://127.0.0.1:8050'
 def add_task():
     '''Add a new task'''
     data = request.json
+    logger.info(f'add_task invoked with {data}')
     task = TaskWrapper.from_dict(data)
     task_name = data['name']
     repository.add_task(task)
@@ -53,6 +57,24 @@ def get_tasks():
             'status': task.get_status()
         } for task in tasks
     ]
+    logger.info(f'Returning get_tasks with {len(tasks)} tasks')
+    return jsonify({'tasks': tasks_list})
+
+
+@server.route('/get_resched_tasks', methods=['GET'])
+def get_reschedulable_tasks():
+    '''Get tasks that can be rescheduled'''
+    tasks = repository.get_reschedulable_tasks()
+    tasks_list = [
+        {
+            'task_id': task.get_id(),
+            'name': task.get_name(),
+            'complexity': task.get_complexity(),
+            'type': task.get_type(),
+            'priority': task.get_priority(),
+        } for task in tasks
+    ]
+    logger.info(f'Returning get_resched_tasks with {len(tasks)} tasks')
     return jsonify({'tasks': tasks_list})
 
 
@@ -70,12 +92,15 @@ def recommend_tasks():
             'priority': task.get_priority(),
         } for task in tasks
     ]
+    logger.debug(f'Recommended tasks: {tasks_list}')
     return jsonify({'tasks': tasks_list})
+
 
 @server.route('/transact_task', methods=['POST'])
 def transact_task():
     '''Start, stop or end a task'''
     data = request.json
+    logger.info(f'transact_task called with {data}')
     task_id = data['task_id']
     rec_id = data['rec_id']
     action = data['action']
@@ -90,6 +115,17 @@ def transact_task():
         rating = data['rating']
         message = repository.finish_task(task_id, rec_id, rating)
 
+    return jsonify({'message': message})
+
+
+@server.route('/reschedule_tasks', methods=['POST'])
+def reschedule_tasks():
+    '''Reschedule selected tasks'''
+    data = request.json
+    logger.info(f'reschedule_tasks called with {data}')
+    task_ids = data['tasks']
+
+    message = repository.reschedule_tasks(task_ids=[int(task_id) for task_id in task_ids])
     return jsonify({'message': message})
 
 
@@ -120,6 +156,8 @@ app.layout = html.Div([
             dbc.Col(dcc.Tabs(id='tabs', value='workflow', children=[
                 dcc.Tab(label='Workflow', value='workflow', children=workflow_layout),
                 dcc.Tab(label='Add Task', value='add-task', children=add_task_layout),
+                dcc.Tab(label='Reschedule Tasks', value='resched-tasks',
+                        children=reschedule_tasks_layout),
                 dcc.Tab(label='View Tasks', value='view-tasks', children=view_tasks_layout)
             ]), width=12)
         ])
@@ -160,6 +198,17 @@ def load_tasks(tab):
     return []
 
 @app.callback(
+    Output('reschedule-tasks-table', 'data'),
+    Input('tabs', 'value')
+)
+def load_resched_tasks(tab):
+    '''Load tasks into the table'''
+    if tab == 'resched-tasks':
+        tasks_response = requests.get(f'{SERVER_URL}/get_resched_tasks', timeout=5)
+        return tasks_response.json()['tasks']
+    return []
+
+@app.callback(
     Output('recommended-tasks-table', 'data'),
     Input('tabs', 'value'),
     Input('regenerate', 'n_clicks')
@@ -196,14 +245,14 @@ def manage_workflow(start_clicks, stop_clicks, selected_rows, tasks):
     if not selected_rows:
         return 'No task selected'
 
+    if (start_clicks is None) and (stop_clicks is None):
+        return 'Invalid action'
+
     selected_task = tasks[selected_rows[0]]
     task_id = selected_task['task_id']
     rec_id = selected_task['rec_id']
     data = {'task_id': task_id, 'rec_id': rec_id}
     action = ctx.triggered_id.split('-')[0]
-
-    if action == 'end':
-        return ''
 
     data['action'] = action
     response = requests.post(f'{SERVER_URL}/transact_task', json=data, timeout=5)
@@ -220,7 +269,7 @@ def manage_workflow(start_clicks, stop_clicks, selected_rows, tasks):
 )
 def submit_rating(n_clicks, selected_rows, tasks, rating):
     '''Submit rating for the task and close modal'''
-    if not selected_rows:
+    if not selected_rows or not n_clicks:
         return 'No task selected', False
 
     selected_task = tasks[selected_rows[0]]
@@ -243,6 +292,9 @@ def manage_view_tasks(view_stop_clicks, view_end_clicks, selected_rows, tasks):
     if not selected_rows:
         return 'No task selected'
 
+    if (view_stop_clicks is None) and (view_end_clicks is None):
+        return 'Invalid action'
+
     selected_task = tasks[selected_rows[0]]
     task_id = selected_task['task_id']
     rec_id = -1
@@ -251,6 +303,25 @@ def manage_view_tasks(view_stop_clicks, view_end_clicks, selected_rows, tasks):
     data['rating'] = 5 # TODO: get rating from user
 
     response = requests.post(f'{SERVER_URL}/transact_task', json=data, timeout=5)
+    return response.json()['message']
+
+@app.callback(
+    Output('resched-output', 'children'),
+    Input('reschedule-selected', 'n_clicks'),
+    State('reschedule-tasks-table', 'selected_rows'),
+    State('reschedule-tasks-table', 'data')
+)
+def manage_reschedule_tasks(regen_clicks, selected_rows, tasks):
+    '''Reschedule selected tasks'''
+    if not selected_rows:
+        return 'No task selected'
+
+    if regen_clicks is None:
+        return 'Invalid action'
+
+    task_ids = [tasks[idx]['task_id'] for idx in selected_rows]
+    data = {'tasks' : task_ids}
+    response = requests.post(f'{SERVER_URL}/reschedule_tasks', json=data, timeout=5)
     return response.json()['message']
 
 @app.callback(
