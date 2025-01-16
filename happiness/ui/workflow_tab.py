@@ -7,6 +7,10 @@ workflow_layout = dbc.Container([
         dbc.Col(html.H3('Workflow', className='text-center my-4'), width=12)
     ]),
     dbc.Row([
+        dbc.Col(dbc.Button(
+            'Start Day', id='start-day', color='info', className='mr-2'), width='auto')
+    ], id='start-end-day-row', className='my-4 justify-content-center'),
+    dbc.Row([
         dbc.Col(dash_table.DataTable(
             id='recommended-tasks-table',
             columns=[
@@ -24,7 +28,7 @@ workflow_layout = dbc.Container([
             hidden_columns=['task_id', 'rec_id'],
             css=[{"selector": ".show-hide", "rule": "display: none"}],
         ), width=12)
-    ]),
+    ], id='tasks-table-row', className='my-4', style={'display': 'none'}),
     dbc.Row([
         dbc.Col(dbc.Button(
             'Regenerate', id='regenerate', color='primary', className='mr-2'), width='auto'),
@@ -34,7 +38,7 @@ workflow_layout = dbc.Container([
             'Stop Task', id='stop-task', color='warning', className='mr-2'), width='auto'),
         dbc.Col(dbc.Button(
             'End Task', id='end-task', color='danger'), width='auto')
-    ], className='my-4'),
+    ], id='task-buttons-row', className='my-4', style={'display': 'none'}),
     dbc.Row([
         dbc.Col(html.Div(id='workflow-output', className='mt-4'), width=12)
     ]),

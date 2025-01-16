@@ -6,8 +6,9 @@ from loguru import logger
 from sqlalchemy import and_, not_
 from sqlalchemy.orm import Session
 
+from happiness import MODEL_DIR
 from happiness.tasks.model import Recommendation, Task, TaskSummary, WorkLog
-from happiness.tasks.randomrecommender import RandomRecommender
+from happiness.tasks.mabrecommender import MABRecommender
 from happiness.tasks.task import TaskWrapper
 
 class TaskRepository:
@@ -15,8 +16,8 @@ class TaskRepository:
     def __init__(self, db_session: Session):
         '''Initialize task repository'''
         self._db_session = db_session
-        self._recommender = RandomRecommender()
-        logger.info(f'Init task repository with a {self._recommender.__class__} recommender')
+        #TODO: Fix hardcoded file name
+        self._recommender = MABRecommender(mdl_file=f'{MODEL_DIR}/eps-cmab.pkl')
 
     def add_task(self, task: TaskWrapper) -> None:
         '''Add a new task'''
@@ -134,6 +135,7 @@ class TaskRepository:
             self._create_work_log(task_id, rec_id)
             self._update_task_summary(task_id)
             self._db_session.commit()
+            self._recommender.update_chosen_task(task_id)
             return f'Task {task.name} started successfully!'
         except ValueError as err:
             logger.exception(err)
@@ -189,3 +191,11 @@ class TaskRepository:
             task_names = [task.name for task in tasks]
             message = f'Tasks {task_names} rescheduled succesfully!'
         return message
+
+    def start_day(self):
+        '''Day start'''
+        self._recommender.load()
+
+    def end_day(self):
+        '''Day end'''
+        self._recommender.save()

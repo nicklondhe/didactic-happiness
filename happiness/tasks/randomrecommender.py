@@ -11,3 +11,15 @@ class RandomRecommender(TaskRecommenderInterface):
     def recommend_tasks(self, tasks: List[TaskWrapper], num_tasks: int) -> List[TaskWrapper]:
         '''Recommend random tasks'''
         return random.sample(tasks, num_tasks)
+
+    def update_chosen_task(self, task_id: int) -> None:
+        '''Callback for when the given task is chosen'''
+        return
+
+    def load(self):
+        '''Load/reload - NOOP for now'''
+        return
+
+    def save(self):
+        '''Save callback - NOOP'''
+        return

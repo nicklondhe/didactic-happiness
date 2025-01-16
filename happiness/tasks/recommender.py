@@ -9,3 +9,15 @@ class TaskRecommenderInterface(ABC):
     @abstractmethod
     def recommend_tasks(self, tasks: List[TaskWrapper], num_tasks: int) -> List[TaskWrapper]:
         '''Recommend tasks based on user's mood'''
+
+    @abstractmethod
+    def update_chosen_task(self, task_id: int) -> None:
+        '''Callback after a task is chosen'''
+
+    @abstractmethod
+    def load(self):
+        '''Load/reload models as needed'''
+
+    @abstractmethod
+    def save(self):
+        '''Perform any saves needed'''
