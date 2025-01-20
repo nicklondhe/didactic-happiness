@@ -1,11 +1,15 @@
 '''Main application file'''
+from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
 import dash
 import dash_bootstrap_components as dbc
 from dash import ctx, dcc, html
 from dash.dependencies import Input, Output, State
 from loguru import logger
+import pandas as pd
+import plotly.express as px
 import requests
+import tzlocal
 
 #layouts
 from happiness.ui.add_task_tab import add_task_layout
@@ -341,6 +345,23 @@ def toggle_day(n_clicks):
     else:
         requests.post(f'{SERVER_URL}/end_day', timeout=5)
         return {'display': 'none'}, {'display': 'none'}, 'Start Day'
+
+@app.callback(
+    Output('report-output', 'figure'),
+    Input('week-selector', 'value')
+)
+def update_worklog_summary_chart(selected_week):
+    '''Plot worklog summary absed on selected week'''
+    if selected_week is None:
+        return {}
+
+    start_date =  datetime.strptime(selected_week, '%Y-%m-%d').replace(
+        tzinfo=tzlocal.get_localzone())
+    end_date = start_date + timedelta(days=7)
+    summary = repository.get_worklog_summary(start_date, end_date)
+    df = pd.DataFrame(list(summary.items()), columns=['date', 'hours_worked'])
+    fig = px.bar(df, x='date', y='hours_worked', title='Hours worked per day')
+    return fig
 
 if __name__ == '__main__':
     app.run_server(debug=True)

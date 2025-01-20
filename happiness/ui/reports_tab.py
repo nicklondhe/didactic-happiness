@@ -43,6 +43,6 @@ reports_layout = dbc.Container([
         ), width=6)
     ], className='justify-content-center'),
     dbc.Row([
-        dbc.Col(html.Div(id='report-output'), width=12)
+        dbc.Col(dcc.Graph(id='report-output'), width=12)
     ])
 ])
