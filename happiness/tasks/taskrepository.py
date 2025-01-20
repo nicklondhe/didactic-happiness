@@ -5,6 +5,7 @@ from typing import List
 from loguru import logger
 from sqlalchemy import and_, not_
 from sqlalchemy.orm import Session
+import pandas as pd
 
 from happiness import MODEL_DIR
 from happiness.tasks.model import Recommendation, Task, TaskSummary, WorkLog
@@ -199,3 +200,27 @@ class TaskRepository:
     def end_day(self):
         '''Day end'''
         self._recommender.save()
+
+    def get_worklog_summary(self, start_date: datetime, end_date: datetime) -> dict:
+        '''Get a worklog summary between the two given dates'''
+        #convert into utc for db query
+        start_date_utc = start_date.astimezone(timezone.utc)
+        end_date_utc = end_date.astimezone(timezone.utc)
+
+        #query worklog
+        worklogs = self._db_session.query(WorkLog).filter(
+            WorkLog.start_ts >= start_date_utc,
+            WorkLog.end_ts < end_date_utc
+        ).all()
+        data = [{
+            'start_ts': worklog.start_ts.astimezone(start_date.tzinfo),
+            'end_ts': worklog.end_ts.astimezone(start_date.tzinfo)
+        } for worklog in worklogs]
+        df = pd.DataFrame(data)
+
+        # group by + sum
+        df['hours_worked'] = (df['end_ts'] - df['start_ts']).dt.total_seconds() / 3600
+        df['start_date'] = df['start_ts'].dt.date
+
+        summary = df.groupby('start_date')['hours_worked'].sum().to_dict()
+        return summary
