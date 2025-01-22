@@ -42,6 +42,17 @@ workflow_layout = dbc.Container([
     dbc.Row([
         dbc.Col(html.Div(id='workflow-output', className='mt-4'), width=12)
     ]),
+    dbc.Row([
+            dbc.Col(dbc.Toast(
+                id='reschedule-toast',
+                header='Tasks Rescheduled',
+                is_open=False,
+                dismissable=True,
+                icon='info',
+                duration=4000,
+                style={'position': 'fixed', 'top': 10, 'right': 10, 'width': 350}
+            ))
+    ]),
     dbc.Modal([
         dbc.ModalHeader("Rate Task Recommendation"),
         dbc.ModalBody([

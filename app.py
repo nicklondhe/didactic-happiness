@@ -133,18 +133,13 @@ def reschedule_tasks():
     message = repository.reschedule_tasks(task_ids=[int(task_id) for task_id in task_ids])
     return jsonify({'message': message})
 
-@server.route('/auto_reschedule', methods=['POST'])
-def autoreschedule():
-    '''Automatically reschedule'''
-    message = repository.auto_reschedule()
-    return jsonify({'message': message})
-
 
 @server.route('/start_day', methods=['POST'])
 def start_day():
     '''Start day'''
     repository.start_day()
-    return jsonify({})
+    message = repository.auto_reschedule()
+    return jsonify({'message': message})
 
 
 @server.route('/end_day', methods=['POST'])
@@ -211,17 +206,14 @@ def load_tasks(tab):
 
 @app.callback(
     Output('reschedule-tasks-table', 'data'),
-    Output('resched-output', 'children'),
     Input('tabs', 'value')
 )
 def load_resched_tasks(tab):
     '''Load tasks into the table'''
     if tab == 'resched-tasks':
         tasks_response = requests.get(f'{SERVER_URL}/get_resched_tasks', timeout=5)
-        autosched_response = requests.post(f'{SERVER_URL}/auto_reschedule', timeout=5)
-        return tasks_response.json()['tasks'], autosched_response.json()['message']\
-            if autosched_response else 'No tasks to autoschedule'
-    return [], None
+        return tasks_response.json()['tasks']
+    return []
 
 @app.callback(
     Output('recommended-tasks-table', 'data'),
@@ -343,17 +335,21 @@ def manage_reschedule_tasks(regen_clicks, selected_rows, tasks):
     Output('tasks-table-row', 'style'),
     Output('task-buttons-row', 'style'),
     Output('start-day', 'children'),
+    Output('reschedule-toast', 'is_open'),
+    Output('reschedule-toast', 'children'),
     Input('start-day', 'n_clicks'),
     prevent_initial_call=True
 )
 def toggle_day(n_clicks):
     '''Toggle the day start/end and show/hide buttons'''
     if n_clicks % 2 == 1:
-        requests.post(f'{SERVER_URL}/start_day', timeout=5)
-        return {'display': 'flex'}, {'display': 'flex'}, 'End Day'
+        response = requests.post(f'{SERVER_URL}/start_day', timeout=5)
+        rescheduled_tasks = response.json().get('message', '')
+        toast_message = 'No tasks were rescheduled.' if not rescheduled_tasks else rescheduled_tasks
+        return {'display': 'flex'}, {'display': 'flex'}, 'End Day', True, toast_message
     else:
         requests.post(f'{SERVER_URL}/end_day', timeout=5)
-        return {'display': 'none'}, {'display': 'none'}, 'Start Day'
+        return {'display': 'none'}, {'display': 'none'}, 'Start Day', False, ''
 
 @app.callback(
     Output('report-output', 'figure'),

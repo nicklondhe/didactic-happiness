@@ -194,10 +194,21 @@ class TaskRepository:
             logger.exception(err)
             return str(err)
 
+    def start_day(self):
+        '''Day start'''
+        self._recommender.load()
+
+    def end_day(self):
+        '''Day end'''
+        self._recommender.save()
+
     def reschedule_tasks(self, task_ids: List[int], auto: bool = False) -> str:
         '''Reschedule tasks with given ids'''
         tasks = []
         message = None
+        if not task_ids:
+            return 'No tasks rescheduled'
+        
         try:
             for task_id in task_ids:
                 task = self._update_task_status(task_id, 'done', 'pending', True)
@@ -286,4 +297,4 @@ class TaskRepository:
             tgt_date = datetime.now(timezone.utc).date()
 
         task_ids = self._find_resched_tasks(tgt_date)
-        return self.reschedule_tasks(task_ids)
+        return self.reschedule_tasks(task_ids, True)
