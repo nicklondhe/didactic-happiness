@@ -138,7 +138,8 @@ def reschedule_tasks():
 def start_day():
     '''Start day'''
     repository.start_day()
-    return jsonify({})
+    message = repository.auto_reschedule()
+    return jsonify({'message': message})
 
 
 @server.route('/end_day', methods=['POST'])
@@ -334,17 +335,21 @@ def manage_reschedule_tasks(regen_clicks, selected_rows, tasks):
     Output('tasks-table-row', 'style'),
     Output('task-buttons-row', 'style'),
     Output('start-day', 'children'),
+    Output('reschedule-toast', 'is_open'),
+    Output('reschedule-toast', 'children'),
     Input('start-day', 'n_clicks'),
     prevent_initial_call=True
 )
 def toggle_day(n_clicks):
     '''Toggle the day start/end and show/hide buttons'''
     if n_clicks % 2 == 1:
-        requests.post(f'{SERVER_URL}/start_day', timeout=5)
-        return {'display': 'flex'}, {'display': 'flex'}, 'End Day'
+        response = requests.post(f'{SERVER_URL}/start_day', timeout=5)
+        rescheduled_tasks = response.json().get('message', '')
+        toast_message = 'No tasks were rescheduled.' if not rescheduled_tasks else rescheduled_tasks
+        return {'display': 'flex'}, {'display': 'flex'}, 'End Day', True, toast_message
     else:
         requests.post(f'{SERVER_URL}/end_day', timeout=5)
-        return {'display': 'none'}, {'display': 'none'}, 'Start Day'
+        return {'display': 'none'}, {'display': 'none'}, 'Start Day', False, ''
 
 @app.callback(
     Output('report-output', 'figure'),

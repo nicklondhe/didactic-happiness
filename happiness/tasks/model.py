@@ -14,6 +14,7 @@ class Task(db.Model):
     priority = db.Column(db.String(10), nullable=False, default='low')
     repeatable = db.Column(db.Boolean, default=False)
     status = db.Column(db.String(10), nullable=False, default='pending') #TODO: needs an index
+    next_scheduled = db.Column(db.Date)
 
 
 class Recommendation(db.Model):
