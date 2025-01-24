@@ -288,6 +288,7 @@ class TaskRepository:
             interval = ceil(result)
             next_date = datetime.now(timezone.utc) + timedelta(days=interval)
             next_date = next_date.date()
+            logger.info(f'Setting next scheduled date {next_date} for task id {task_id}')
 
         return next_date
 
