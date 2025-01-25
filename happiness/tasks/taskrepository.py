@@ -258,7 +258,6 @@ class TaskRepository:
 
     def _find_next_schedule_date(self, task_id: int) -> datetime.date:
         '''Find next auto schedule date for given task'''
-        #TODO: hack of 15 days
         query = f'''
             SELECT avg(interval_days) as avg_interval
             FROM(
@@ -272,6 +271,7 @@ class TaskRepository:
                 WHERE ts.task_id  = t.id 
                 AND t.repeatable = 1
                 AND t.id = {task_id}
+                AND date(ts.start_date) >= date('now', '-45 day')
             )
             SELECT
                 task_id,
@@ -279,8 +279,7 @@ class TaskRepository:
             FROM
                 task_intervals
             WHERE
-                next_start_date IS NOT NULL
-            AND interval_days < 15 ) 
+                next_start_date IS NOT NULL)
         '''
         result = self._db_session.execute(text(query)).scalar_one_or_none()
         next_date = None
