@@ -284,7 +284,7 @@ class TaskRepository:
         result = self._db_session.execute(text(query)).scalar_one_or_none()
         next_date = None
         if result:
-            interval = floor(result)
+            interval = ceil(result)
             next_date = datetime.now(timezone.utc) + timedelta(days=interval)
             next_date = next_date.date()
             logger.info(f'Setting next scheduled date {next_date} for task id {task_id}')
