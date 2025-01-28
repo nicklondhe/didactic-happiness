@@ -29,6 +29,7 @@ def generate_week_options(start_date: datetime):
 
 # Start from the first Sunday of Dec 2024
 week_options = generate_week_options(datetime(2024, 12, 1))
+default_week_value = week_options[-2]['value']
 
 reports_layout = dbc.Container([
     dbc.Row([
@@ -38,6 +39,7 @@ reports_layout = dbc.Container([
         dbc.Col(dcc.Dropdown(
             id='week-selector',
             options=week_options,
+            value=default_week_value,
             placeholder='Select a week',
             className='mb-4'
         ), width=6)
