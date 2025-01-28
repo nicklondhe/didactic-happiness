@@ -208,7 +208,7 @@ class TaskRepository:
         message = None
         if not task_ids:
             return 'No tasks rescheduled'
-        
+
         try:
             for task_id in task_ids:
                 task = self._update_task_status(task_id, 'done', 'pending', True)
@@ -223,14 +223,6 @@ class TaskRepository:
             auto_prefix = 'automatically ' if auto else ''
             message = f'Tasks {task_names} {auto_prefix} rescheduled succesfully!'
         return message
-
-    def start_day(self):
-        '''Day start'''
-        self._recommender.load()
-
-    def end_day(self):
-        '''Day end'''
-        self._recommender.save()
 
     def get_worklog_summary(self, start_date: datetime, end_date: datetime) -> dict:
         '''Get a worklog summary between the two given dates'''
@@ -268,7 +260,7 @@ class TaskRepository:
                     LEAD(ts.start_date) OVER (PARTITION BY ts.task_id ORDER BY ts.start_date) AS next_start_date
                 FROM
                     task_summary ts, task t
-                WHERE ts.task_id  = t.id 
+                WHERE ts.task_id  = t.id
                 AND t.repeatable = 1
                 AND t.id = {task_id}
                 AND date(ts.start_date) >= date('now', '-45 day')
