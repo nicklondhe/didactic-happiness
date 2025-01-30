@@ -227,13 +227,11 @@ class TaskRepository:
     def get_worklog_summary(self, start_date: datetime, end_date: datetime) -> dict:
         '''Get a worklog summary between the two given dates'''
         #convert into utc for db query
-        start_date_utc = start_date.astimezone(timezone.utc)
-        end_date_utc = end_date.astimezone(timezone.utc)
 
-        #query worklog
+        #query worklog - use tz aware dates directly
         worklogs = self._db_session.query(WorkLog).filter(
-            WorkLog.start_ts >= start_date_utc,
-            WorkLog.end_ts < end_date_utc
+            WorkLog.start_ts >= start_date,
+            WorkLog.end_ts < end_date
         ).all()
         data = [{
             'start_ts': worklog.start_ts.astimezone(start_date.tzinfo),
