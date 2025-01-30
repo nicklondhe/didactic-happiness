@@ -242,6 +242,8 @@ class TaskRepository:
         # group by + sum
         df['hours_worked'] = (df['end_ts'] - df['start_ts']).dt.total_seconds() / 3600
         df['start_date'] = df['start_ts'].dt.date
+        # data filtering
+        df = df[df['hours_worked'] <= 3]
 
         summary = df.groupby('start_date')['hours_worked'].sum().to_dict()
         return summary
