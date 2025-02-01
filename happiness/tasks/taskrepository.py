@@ -229,13 +229,14 @@ class TaskRepository:
         #convert into utc for db query
 
         #query worklog - use tz aware dates directly
-        worklogs = self._db_session.query(WorkLog).filter(
+        worklogs = self._db_session.query(WorkLog, Task).filter(
             WorkLog.start_ts >= start_date,
             WorkLog.end_ts < end_date
-        ).all()
+        ).filter(WorkLog.task_id == Task.id).all()
         data = [{
-            'start_ts': worklog.start_ts.astimezone(start_date.tzinfo),
-            'end_ts': worklog.end_ts.astimezone(start_date.tzinfo)
+            'start_ts': worklog[0].start_ts.astimezone(start_date.tzinfo),
+            'end_ts': worklog[0].end_ts.astimezone(start_date.tzinfo),
+            'type': worklog[1].type
         } for worklog in worklogs]
         df = pd.DataFrame(data)
 
@@ -245,7 +246,7 @@ class TaskRepository:
         # data filtering
         df = df[df['hours_worked'] <= 3]
 
-        summary = df.groupby('start_date')['hours_worked'].sum().to_dict()
+        summary = df.groupby(['start_date', 'type'])['hours_worked'].sum().to_dict()
         return summary
 
     def _find_next_schedule_date(self, task_id: int) -> datetime.date:
