@@ -45,6 +45,9 @@ reports_layout = dbc.Container([
         ), width=6)
     ], className='justify-content-center'),
     dbc.Row([
-        dbc.Col(dcc.Graph(id='report-output'), width=12)
-    ])
+        dbc.Col(dcc.Graph(id='worklog-report-output'), width=12)
+    ]),
+    dbc.Row([
+        dbc.Col(dcc.Graph(id='task-completion-report-output'), width=12)
+    ]),
 ])
