@@ -352,7 +352,7 @@ def toggle_day(n_clicks):
         return {'display': 'none'}, {'display': 'none'}, 'Start Day', False, ''
 
 @app.callback(
-    Output('report-output', 'figure'),
+    Output('worklog-report-output', 'figure'),
     Input('week-selector', 'value')
 )
 def update_worklog_summary_chart(selected_week):
@@ -366,8 +366,61 @@ def update_worklog_summary_chart(selected_week):
     summary = repository.get_worklog_summary(start_date, end_date)
     data = [(date, task_type, hours) for (date, task_type), hours in summary.items()]
     df = pd.DataFrame(data, columns=['date', 'type', 'hours_worked'])
-    fig = px.bar(df, x='date', y='hours_worked', color='type', barmode='stack', title='Hours worked per day')
+    fig = px.bar(df, x='date', y='hours_worked', 
+                 color='type', barmode='stack', title='Hours worked per day')
     return fig
+
+@app.callback(
+    Output('task-completion-report-output', 'figure'),
+    Input('week-selector', 'value')
+)
+def update_task_completion_heatmap(selected_week):
+    '''Plot task compeltions as a heatmap'''
+    if selected_week is None:
+        return {}
+
+    start_date =  datetime.strptime(selected_week, '%Y-%m-%d').replace(
+        tzinfo=tzlocal.get_localzone())
+    end_date = start_date + timedelta(days=7)
+    data_list = repository.get_task_completion_summary(start_date, end_date)
+    df = pd.DataFrame(data_list)
+
+    # Count occurrences
+    heatmap_df = df.value_counts().reset_index()
+    heatmap_df.columns = ["day_of_week", "hour_of_day", "task_count"]
+
+    # Map weekday numbers to labels
+    weekday_labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    heatmap_df["day_of_week"] = heatmap_df["day_of_week"].map(lambda x: weekday_labels[x])
+
+    # Create all possible (day_of_week, hour_of_day) combinations
+    all_combinations = pd.MultiIndex.from_product(
+        [weekday_labels, range(24)], names=["day_of_week", "hour_of_day"]
+    )
+
+    # Reindex the DataFrame to include all combinations, filling missing values with 0
+    heatmap_df = heatmap_df.set_index(["day_of_week", "hour_of_day"]).reindex(
+        all_combinations, fill_value=0).reset_index()
+
+    # Plot using Plotly Express
+    fig = px.density_heatmap(
+        heatmap_df,
+        x="hour_of_day",
+        y="day_of_week",
+        z="task_count",
+        title="Completed Tasks Heatmap",
+        color_continuous_scale="reds",
+        labels={"hour_of_day": "Hour of Day",
+                "day_of_week": "Day of Week",
+                "task_count": "Completed Tasks"},
+        category_orders={
+            "hour_of_day": list(range(24)),
+            "day_of_week": weekday_labels[-1:] + weekday_labels[0:6]
+        }
+    )
+    fig.update_xaxes(side="top")
+    return fig
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)

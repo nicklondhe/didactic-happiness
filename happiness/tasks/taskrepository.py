@@ -226,8 +226,6 @@ class TaskRepository:
 
     def get_worklog_summary(self, start_date: datetime, end_date: datetime) -> dict:
         '''Get a worklog summary between the two given dates'''
-        #convert into utc for db query
-
         #query worklog - use tz aware dates directly
         worklogs = self._db_session.query(WorkLog, Task).filter(
             WorkLog.start_ts >= start_date,
@@ -248,6 +246,30 @@ class TaskRepository:
 
         summary = df.groupby(['start_date', 'type'])['hours_worked'].sum().to_dict()
         return summary
+
+    def get_task_completion_summary(self, start_date: datetime, end_date: datetime) -> list:
+        '''Get task completions by day of week + hour of day between given date range'''
+        # Query for heatmap data
+        heatmap_data = (
+            self._db_session.query(TaskSummary.end_date)
+            .filter(
+                TaskSummary.has_ended == 1,
+                TaskSummary.end_date >= start_date,
+                TaskSummary.end_date < end_date
+            )
+            .all()
+        )
+
+        # convert timestamps
+        local_tz = start_date.tzinfo
+        converted_data = [
+            row[0].astimezone(local_tz)  # Directly convert to local timezone
+            for row in heatmap_data
+        ]
+
+        # Aggregate tasks by day of week and hour
+        data_list = [{"day_of_week": dt.weekday(), "hour_of_day": dt.hour} for dt in converted_data]
+        return data_list
 
     def _find_next_schedule_date(self, task_id: int) -> datetime.date:
         '''Find next auto schedule date for given task'''
