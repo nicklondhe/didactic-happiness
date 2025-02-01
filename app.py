@@ -4,6 +4,7 @@ from flask import Flask, request, jsonify
 import dash
 import dash_bootstrap_components as dbc
 from dash import ctx, dcc, html
+from dash_bootstrap_templates import load_figure_template
 from dash.dependencies import Input, Output, State
 from loguru import logger
 import pandas as pd
@@ -152,6 +153,7 @@ def end_day():
 # Dash setup
 app = dash.Dash(__name__, server=server,
                 url_base_pathname='/', external_stylesheets=[dbc.themes.MINTY])
+load_figure_template('minty')
 
 app.layout = html.Div([
     dbc.Container([
@@ -409,7 +411,6 @@ def update_task_completion_heatmap(selected_week):
         y="day_of_week",
         z="task_count",
         title="Completed Tasks Heatmap",
-        color_continuous_scale="reds",
         labels={"hour_of_day": "Hour of Day",
                 "day_of_week": "Day of Week",
                 "task_count": "Completed Tasks"},
@@ -421,6 +422,40 @@ def update_task_completion_heatmap(selected_week):
     fig.update_xaxes(side="top")
     return fig
 
+@app.callback(
+    Output('worklog-group-output', 'figure'),
+    Input('week-selector', 'value')
+)
+def update_worklog_grouped_output(selected_week):
+    '''Plot worklog split by priority and complexity'''
+    if selected_week is None:
+        return {}
+
+    start_date =  datetime.strptime(selected_week, '%Y-%m-%d').replace(
+        tzinfo=tzlocal.get_localzone())
+    end_date = start_date + timedelta(days=7)
+
+    # get data
+    data = repository.get_worklog_splits(start_date, end_date)
+
+    # Convert query result to DataFrame
+    df = pd.DataFrame(data, columns=["priority", "complexity", "total_time"])
+
+    # Convert total_time from seconds to hours
+    df["total_time"] = df["total_time"] / 3600  # Convert to hours
+
+    # Plot sunburst chart
+    fig = px.sunburst(
+        df,
+        path=["priority", "complexity"],  # Sunburst levels: Priority → Complexity
+        values="total_time",
+        title="Time Spent on Tasks by Priority and Complexity",
+        labels={"priority": "Priority", "complexity": "Complexity", "total_time": "Hours Spent"},
+        color="total_time",
+        template="minty"
+        #color_continuous_scale="blues"
+    )
+    return fig
 
 if __name__ == '__main__':
     app.run_server(debug=True)
