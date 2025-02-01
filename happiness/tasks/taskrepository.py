@@ -4,7 +4,7 @@ from math import ceil
 from typing import List
 
 from loguru import logger
-from sqlalchemy import and_, not_, text
+from sqlalchemy import and_, not_, func, text
 from sqlalchemy.orm import Session
 import pandas as pd
 
@@ -270,6 +270,28 @@ class TaskRepository:
         # Aggregate tasks by day of week and hour
         data_list = [{"day_of_week": dt.weekday(), "hour_of_day": dt.hour} for dt in converted_data]
         return data_list
+
+    def get_worklog_splits(self, start_date: datetime, end_date: datetime) -> list:
+        '''Get worklog splits by complexity and priority'''
+        subquery = self._db_session.query(
+            WorkLog.task_id,
+            (
+                func.strftime('%s', WorkLog.end_ts) - func.strftime('%s', WorkLog.start_ts)
+            ).label('time_worked')
+        ).filter(
+            WorkLog.start_ts >= start_date,
+            WorkLog.end_ts < end_date
+        ).subquery()
+
+        data = self._db_session.query(
+            Task.priority, Task.complexity,
+            func.sum(subquery.c.time_worked).label('total_time')
+        ).join(
+            Task, Task.id == subquery.c.task_id
+        ).group_by(
+            Task.priority, Task.complexity
+        ).all()
+        return data
 
     def _find_next_schedule_date(self, task_id: int) -> datetime.date:
         '''Find next auto schedule date for given task'''
