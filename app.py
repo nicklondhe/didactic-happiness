@@ -368,7 +368,7 @@ def update_worklog_summary_chart(selected_week):
     summary = repository.get_worklog_summary(start_date, end_date)
     data = [(date, task_type, hours) for (date, task_type), hours in summary.items()]
     df = pd.DataFrame(data, columns=['date', 'type', 'hours_worked'])
-    fig = px.bar(df, x='date', y='hours_worked', 
+    fig = px.bar(df, x='date', y='hours_worked',
                  color='type', barmode='stack', title='Hours worked per day')
     return fig
 

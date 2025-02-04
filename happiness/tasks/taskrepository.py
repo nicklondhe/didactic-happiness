@@ -1,6 +1,5 @@
 '''Task Repository'''
 from datetime import datetime, timedelta, timezone
-from math import ceil
 from typing import List
 
 from loguru import logger
@@ -297,31 +296,33 @@ class TaskRepository:
         '''Find next auto schedule date for given task'''
         query = f'''
             SELECT avg(interval_days) as avg_interval
-            FROM(
-            WITH task_intervals AS (
+            FROM (
+                WITH task_intervals AS (
+                    SELECT
+                        ts.task_id,
+                        ts.start_date,
+                        LEAD(ts.start_date) OVER (PARTITION BY ts.task_id ORDER BY ts.start_date) AS next_start_date,
+                        ROW_NUMBER() OVER (PARTITION BY ts.task_id ORDER BY ts.start_date DESC) AS rn
+                    FROM
+                        task_summary ts
+                    JOIN task t ON ts.task_id = t.id
+                    WHERE t.repeatable = 1
+                    AND t.id = {task_id}
+                )
                 SELECT
-                    ts.task_id,
-                    ts.start_date,
-                    LEAD(ts.start_date) OVER (PARTITION BY ts.task_id ORDER BY ts.start_date) AS next_start_date
+                    task_id,
+                    julianday(next_start_date) - julianday(start_date) AS interval_days
                 FROM
-                    task_summary ts, task t
-                WHERE ts.task_id  = t.id
-                AND t.repeatable = 1
-                AND t.id = {task_id}
-                AND date(ts.start_date) >= date('now', '-45 day')
+                    task_intervals
+                WHERE
+                    next_start_date IS NOT NULL
+                    AND rn <= 10
             )
-            SELECT
-                task_id,
-                julianday(next_start_date) - julianday(start_date) AS interval_days
-            FROM
-                task_intervals
-            WHERE
-                next_start_date IS NOT NULL)
         '''
         result = self._db_session.execute(text(query)).scalar_one_or_none()
         next_date = None
         if result:
-            interval = ceil(result)
+            interval = round(result)
             next_date = datetime.now(timezone.utc) + timedelta(days=interval)
             next_date = next_date.date()
             logger.info(f'Setting next scheduled date {next_date} for task id {task_id}')
