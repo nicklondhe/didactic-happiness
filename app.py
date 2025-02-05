@@ -410,6 +410,7 @@ def update_task_completion_heatmap(selected_week):
         x="hour_of_day",
         y="day_of_week",
         z="task_count",
+        nbinsx=24, nbinsy=7,
         title="Completed Tasks Heatmap",
         labels={"hour_of_day": "Hour of Day",
                 "day_of_week": "Day of Week",
