@@ -9,18 +9,21 @@ from dash.dependencies import Input, Output, State
 from loguru import logger
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import requests
 import tzlocal
 
 #layouts
+from happiness.tasks.reportshelper import ReportsHelper
+from happiness.tasks.model import db
+from happiness.tasks.task import TaskWrapper
+from happiness.tasks.taskrepository import TaskRepository
 from happiness.ui.add_task_tab import add_task_layout
 from happiness.ui.reports_tab import reports_layout
 from happiness.ui.reschedule_tasks import reschedule_tasks_layout
 from happiness.ui.view_tasks_tab import view_tasks_layout
 from happiness.ui.workflow_tab import workflow_layout
-from happiness.tasks.model import db
-from happiness.tasks.task import TaskWrapper
-from happiness.tasks.taskrepository import TaskRepository
+
 
 # Flask setup
 server = Flask(__name__)
@@ -33,6 +36,7 @@ with server.app_context():
     db.create_all()
 
 repository = TaskRepository(db.session)
+helper = ReportsHelper(db.session)
 #TODO: URL is hardcoded, should be in a config file
 SERVER_URL = 'http://127.0.0.1:8050'
 
@@ -410,6 +414,7 @@ def update_task_completion_heatmap(selected_week):
         x="hour_of_day",
         y="day_of_week",
         z="task_count",
+        nbinsx=24, nbinsy=7,
         title="Completed Tasks Heatmap",
         labels={"hour_of_day": "Hour of Day",
                 "day_of_week": "Day of Week",
@@ -456,6 +461,48 @@ def update_worklog_grouped_output(selected_week):
         #color_continuous_scale="blues"
     )
     return fig
+
+@app.callback(
+    Output('avg-task-time-report', 'figure'),
+    Input('week-selector', 'value')
+)
+def update_avg_task_time_report(selected_week):
+    '''Avg time per task heatmap'''
+    if selected_week is None:
+        return {}
+
+    start_date =  datetime.strptime(selected_week, '%Y-%m-%d').replace(
+        tzinfo=tzlocal.get_localzone())
+    end_date = start_date + timedelta(days=7)
+
+    df = helper.get_focus_summary(start_date, end_date)
+
+    fig = go.Figure()
+
+    # Add Stacked Bar
+    fig.add_trace(go.Bar(
+        x=df["task_date"], 
+        y=df["minutes_worked"], 
+        name="Avg Minutes per task"
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=df["task_date"], 
+        y=df["task_switches"], 
+        name="Task Switches", 
+        yaxis="y2", 
+        mode="lines+markers",
+    ))
+
+    # Set Layout with Two Y-Axes
+    fig.update_layout(
+        title="Work Patterns",
+        xaxis=dict(title="Date"),
+        yaxis=dict(title="Avg Minutes per task", side="left"),
+        yaxis2=dict(title="Task Switches", overlaying="y", side="right")
+    )
+    return fig
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)
