@@ -9,6 +9,7 @@ from dash.dependencies import Input, Output, State
 from loguru import logger
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import requests
 import tzlocal
 
@@ -474,27 +475,32 @@ def update_avg_task_time_report(selected_week):
         tzinfo=tzlocal.get_localzone())
     end_date = start_date + timedelta(days=7)
 
-    df = helper.get_avg_task_time(start_date, end_date)
+    df = helper.get_focus_summary(start_date, end_date)
 
-    weekday_labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-    df["day_of_week"] = df["day_of_week"].map(lambda x: weekday_labels[x])
+    fig = go.Figure()
 
-    # Plot using Plotly Express
-    fig = px.density_heatmap(
-        df,
-        x="hour_of_day",
-        y="day_of_week",
-        z="minutes_worked",
-        nbinsx=24, nbinsy=7,
-        title="Avg task times Heatmap",
-        labels={"hour_of_day": "Hour of Day",
-                "day_of_week": "Day of Week"},
-        category_orders={
-            "hour_of_day": list(range(24)),
-            "day_of_week": weekday_labels[-1:] + weekday_labels[0:6]
-        }
+    # Add Stacked Bar
+    fig.add_trace(go.Bar(
+        x=df["task_date"], 
+        y=df["minutes_worked"], 
+        name="Avg Minutes per task"
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=df["task_date"], 
+        y=df["task_switches"], 
+        name="Task Switches", 
+        yaxis="y2", 
+        mode="lines+markers",
+    ))
+
+    # Set Layout with Two Y-Axes
+    fig.update_layout(
+        title="Work Patterns",
+        xaxis=dict(title="Date"),
+        yaxis=dict(title="Avg Minutes per task", side="left"),
+        yaxis2=dict(title="Task Switches", overlaying="y", side="right")
     )
-    fig.update_xaxes(side="top")
     return fig
 
 
