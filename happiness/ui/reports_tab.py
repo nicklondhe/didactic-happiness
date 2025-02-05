@@ -53,4 +53,7 @@ reports_layout = dbc.Container([
     dbc.Row([
         dbc.Col(dcc.Graph(id='task-completion-report-output'), width=12)
     ]),
+    dbc.Row([
+        dbc.Col(dcc.Graph(id='avg-task-time-report'), width=12)
+    ]),
 ])

@@ -13,14 +13,16 @@ import requests
 import tzlocal
 
 #layouts
+from happiness.tasks.reportshelper import ReportsHelper
+from happiness.tasks.model import db
+from happiness.tasks.task import TaskWrapper
+from happiness.tasks.taskrepository import TaskRepository
 from happiness.ui.add_task_tab import add_task_layout
 from happiness.ui.reports_tab import reports_layout
 from happiness.ui.reschedule_tasks import reschedule_tasks_layout
 from happiness.ui.view_tasks_tab import view_tasks_layout
 from happiness.ui.workflow_tab import workflow_layout
-from happiness.tasks.model import db
-from happiness.tasks.task import TaskWrapper
-from happiness.tasks.taskrepository import TaskRepository
+
 
 # Flask setup
 server = Flask(__name__)
@@ -33,6 +35,7 @@ with server.app_context():
     db.create_all()
 
 repository = TaskRepository(db.session)
+helper = ReportsHelper(db.session)
 #TODO: URL is hardcoded, should be in a config file
 SERVER_URL = 'http://127.0.0.1:8050'
 
@@ -457,6 +460,43 @@ def update_worklog_grouped_output(selected_week):
         #color_continuous_scale="blues"
     )
     return fig
+
+@app.callback(
+    Output('avg-task-time-report', 'figure'),
+    Input('week-selector', 'value')
+)
+def update_avg_task_time_report(selected_week):
+    '''Avg time per task heatmap'''
+    if selected_week is None:
+        return {}
+
+    start_date =  datetime.strptime(selected_week, '%Y-%m-%d').replace(
+        tzinfo=tzlocal.get_localzone())
+    end_date = start_date + timedelta(days=7)
+
+    df = helper.get_avg_task_time(start_date, end_date)
+
+    weekday_labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    df["day_of_week"] = df["day_of_week"].map(lambda x: weekday_labels[x])
+
+    # Plot using Plotly Express
+    fig = px.density_heatmap(
+        df,
+        x="hour_of_day",
+        y="day_of_week",
+        z="minutes_worked",
+        nbinsx=24, nbinsy=7,
+        title="Avg task times Heatmap",
+        labels={"hour_of_day": "Hour of Day",
+                "day_of_week": "Day of Week"},
+        category_orders={
+            "hour_of_day": list(range(24)),
+            "day_of_week": weekday_labels[-1:] + weekday_labels[0:6]
+        }
+    )
+    fig.update_xaxes(side="top")
+    return fig
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)
