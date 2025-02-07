@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 import pandas as pd
 
-from happiness.tasks.model import WorkLog
+from happiness.tasks.model import TaskSummary, WorkLog
 
 
 class ReportsHelper:
@@ -24,27 +24,44 @@ class ReportsHelper:
         data = [{
             'start_ts': worklog.start_ts,
             'end_ts': worklog.end_ts,
+            'task_id': worklog.task_id
         } for worklog in worklogs]
         df = pd.DataFrame(data)
 
         df['seconds_worked'] = (df['end_ts'] - df['start_ts']).dt.total_seconds()
         df = df[df['seconds_worked'] <= (3 * 3600)]
+        df['task_date'] = df['start_ts'].dt.date
+        df['task_date'] = pd.to_datetime(df['task_date'])
+        return df
+
+    def _get_task_completions(self, start_ts: int, end_ts: int) -> pd.DataFrame:
+        '''Get completed tasks between the given dates'''
+        summaries = self._db_session.query(TaskSummary).filter(
+            func.strftime('%s', TaskSummary.start_date) >= str(start_ts),
+            func.strftime('%s', TaskSummary.end_date) < str(end_ts),
+            TaskSummary.has_ended == 1
+        ).all()
+        df = pd.DataFrame([row.__dict__ for row in summaries])
+        df.drop(columns=["_sa_instance_state"], inplace=True)
+        df['task_date'] = df['start_date'].dt.date
+        df['task_date'] = pd.to_datetime(df['task_date'])
         return df
 
     def _get_task_switch_count(self, start_ts: int, end_ts: int) -> pd.DataFrame:
         '''Count task switches by day'''
         query = f'''
             WITH OrderedTasks AS (
-                SELECT 
+                SELECT
                     task_id,
                     start_ts,
                     end_ts,
                     DATE(start_ts) AS task_date,
                     LAG(task_id) OVER (PARTITION BY DATE(start_ts) ORDER BY start_ts) AS prev_task
                 FROM work_log
-                where strftime('%s', start_ts) >= '{start_ts}' and strftime('%s', end_ts) < '{end_ts}'
+                WHERE strftime('%s', start_ts) >= '{start_ts}'
+                AND strftime('%s', end_ts) < '{end_ts}'
             )
-            SELECT 
+            SELECT
                 task_date,
                 COUNT(*) AS task_switches
             FROM OrderedTasks
@@ -74,3 +91,24 @@ class ReportsHelper:
         df_switches['task_date'] = pd.to_datetime(df_switches['task_date'])
         df_merged = df_switches.merge(df_avg, on='task_date')
         return df_merged.fillna(0)
+
+    def get_completion_analysis(self, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+        '''Get task completion stats with total tasks and avg time spent'''
+        start_ts = int(start_date.timestamp())
+        end_ts = int(end_date.timestamp())
+        worklogs = self._get_worklogs(start_ts, end_ts)
+        completions = self._get_task_completions(start_ts, end_ts)
+        worklog_summary = worklogs.groupby('task_date').agg(
+            total_tasks=('task_id', 'nunique'),  # Count unique tasks per day
+            avg_time_per_task=('seconds_worked', lambda x: (x / 60).mean())  # Convert to minutes
+        ).reset_index()
+        completion_summary = completions[
+            completions['task_date'] == completions['end_date'].dt.date
+            ].groupby('task_date').agg(
+                completed_tasks=('task_id', 'count')
+            ).reset_index()
+        df_merged = worklog_summary.merge(completion_summary, on='task_date')
+        df_merged['completion_pct'] = (
+            df_merged['completed_tasks'] / df_merged['total_tasks']
+        ) * 100
+        return df_merged.head(7) # hack
