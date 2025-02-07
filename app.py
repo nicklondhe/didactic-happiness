@@ -481,16 +481,16 @@ def update_avg_task_time_report(selected_week):
 
     # Add Stacked Bar
     fig.add_trace(go.Bar(
-        x=df["task_date"], 
-        y=df["minutes_worked"], 
+        x=df["task_date"],
+        y=df["minutes_worked"],
         name="Avg Minutes per task"
     ))
 
     fig.add_trace(go.Scatter(
-        x=df["task_date"], 
-        y=df["task_switches"], 
-        name="Task Switches", 
-        yaxis="y2", 
+        x=df["task_date"],
+        y=df["task_switches"],
+        name="Task Switches",
+        yaxis="y2",
         mode="lines+markers",
     ))
 
@@ -501,6 +501,26 @@ def update_avg_task_time_report(selected_week):
         yaxis=dict(title="Avg Minutes per task", side="left"),
         yaxis2=dict(title="Task Switches", overlaying="y", side="right")
     )
+    return fig
+
+@app.callback(
+    Output('duration-count-report', 'figure'),
+    Input('week-selector', 'value')
+)
+def update_duration_count_report(selected_week):
+    '''Task duration vs count scatter'''
+    if selected_week is None:
+        return {}
+
+    start_date =  datetime.strptime(selected_week, '%Y-%m-%d').replace(
+        tzinfo=tzlocal.get_localzone())
+    end_date = start_date + timedelta(days=7)
+
+    df = helper.get_completion_analysis(start_date, end_date)
+    fig = px.scatter(df, x='total_tasks', y='avg_time_per_task',
+                     size='completion_pct', color='completion_pct',
+                     hover_data=['task_date'],
+                     title='Task Duration vs Task Count')
     return fig
 
 
