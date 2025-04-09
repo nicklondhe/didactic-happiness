@@ -140,6 +140,17 @@ class TaskRepository:
         rows = self._db_session.query(Task).filter_by(next_scheduled=tgt_date, repeatable=1).all()
         return [row.id for row in rows] if rows else []
 
+    def _stop_inprogress_tasks(self):
+        '''Stop all tasks in progress'''
+        tasks = self._db_session.query(Task.id, WorkLog.rec_id).join(
+            WorkLog, Task.id == WorkLog.task_id
+            ).filter(
+                Task.status == 'in_progress',
+                WorkLog.end_ts is None
+                ).all()
+        for task in tasks:
+            self.stop_task(task[0], task[1])
+
     def start_task(self, task_id: int, rec_id: int) -> str:
         '''Start a task'''
         try:
@@ -200,6 +211,7 @@ class TaskRepository:
     def end_day(self):
         '''Day end'''
         self._recommender.save()
+        self._stop_inprogress_tasks()
 
     def reschedule_tasks(self, task_ids: List[int], auto: bool = False) -> str:
         '''Reschedule tasks with given ids'''
