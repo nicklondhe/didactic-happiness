@@ -146,7 +146,7 @@ class TaskRepository:
             WorkLog, Task.id == WorkLog.task_id
             ).filter(
                 Task.status == 'in_progress',
-                WorkLog.end_ts is None
+                WorkLog.end_ts.is_(None)
                 ).all()
         for task in tasks:
             self.stop_task(task[0], task[1])
