@@ -151,9 +151,19 @@ class TaskRepository:
         for task in tasks:
             self.stop_task(task[0], task[1])
 
+    def _check_inprogress_tasks(self):
+        '''Check if any tasks are in progress, raise ValueError if true'''
+        count = self._db_session.query(Task).filter(
+            Task.status == 'in_progress'
+        ).count()
+
+        if count > 0:
+            raise ValueError(f'There are {count} tasks currently in progress.')
+
     def start_task(self, task_id: int, rec_id: int) -> str:
         '''Start a task'''
         try:
+            self._check_inprogress_tasks()
             task = self._update_task_status(task_id, 'pending', 'in_progress')
             self._create_work_log(task_id, rec_id)
             self._update_task_summary(task_id)
